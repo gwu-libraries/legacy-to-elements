@@ -1,1 +1,2 @@
-# lyterati-elements
+# Code for migrating Lyterati data to Elements
+
