@@ -1,0 +1,33 @@
+<resultset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <row>
+	<field name="gw_id">G123456789</field>
+	<field name="title">A fascinating article</field>
+	<field name="publisher">Journal of Fascinating Literature</field>
+	<field name="authors" xsi:nil="true"/>
+	<field name="start_year">2003</field>
+  </row>
+
+  <row>
+	<field name="gw_id">G123456789</field>
+	<field name="title">Fascinating problems in fascinating literature</field>
+	<field name="publisher">Fascinating Literature Letters</field>
+	<field name="authors" xsi:nil="true"/>
+	<field name="start_year">2004</field>
+  </row>
+
+    <row>
+	<field name="gw_id">G123456789</field>
+	<field name="title">Progress toward more fascinaing journal articles on topics of recurrent fascination</field>
+	<field name="publisher">arXiv</field>
+	<field name="authors" xsi:nil="true"/>
+	<field name="start_year">2014</field>
+  </row>
+
+  <row>
+	<field name="gw_id">G987654321</field>
+	<field name="title">Introductory Lectures on Fascinating Stuff</field>
+	<field name="publisher">Scientific Stuff</field>
+	<field name="authors">Jeremy Fisher, Squirrel Nutkin and Jemima Puddle-duck</field>
+	<field name="start_year">2012</field>
+  </row>
+</resultset>

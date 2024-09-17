@@ -1,0 +1,216 @@
+    {
+        "meta": {
+            "count": 1,
+            "db_response_time_ms": 579,
+            "page": 1,
+            "per_page": 25,
+            "groups_count": null
+        },
+        "results": [
+            {
+                "id": "https://openalex.org/W999999999",
+                "doi": "https://doi.org/10.9999/999999",
+                "title": "Progress toward more fascinaing journal articles on topics of recurrent fascination",
+                "display_name": "Progress toward more fascinaing journal articles on topics of recurrent fascination",
+                "relevance_score": 633.3292,
+                "publication_year": 2014,
+                "publication_date": "2014-01-01",
+                "ids": {
+                    "openalex": "https://openalex.org/W999999999",
+                    "doi": "https://doi.org/10.9999/999999",
+                    "mag": "99999999"
+                },
+                "language": "en",
+                "primary_location": {
+                    "is_oa": true,
+                    "landing_page_url": "https://arxiv.org/abs/99999999999",
+                    "pdf_url": null,
+                    "source": {
+                        "id": "https://openalex.org/S99999999",
+                        "display_name": "arXiv (Cornell University)",
+                        "issn_l": null,
+                        "issn": null,
+                        "is_oa": true,
+                        "is_in_doaj": false,
+                        "host_organization": "https://openalex.org/I205783295",
+                        "host_organization_name": "Cornell University",
+                        "host_organization_lineage": [
+                            "https://openalex.org/I205783295"
+                        ],
+                        "host_organization_lineage_names": [
+                            "Cornell University"
+                        ],
+                        "type": "repository"
+                    },
+                    "license": "other-oa",
+                    "license_id": "https://openalex.org/licenses/other-oa",
+                    "version": "submittedVersion",
+                    "is_accepted": false,
+                    "is_published": false
+                },
+                "type": "preprint",
+                "type_crossref": "posted-content",
+                "indexed_in": [
+                    "datacite"
+                ],
+                "open_access": {
+                    "is_oa": true,
+                    "oa_status": "green",
+                    "oa_url": "https://arxiv.org/abs/99999999999",
+                    "any_repository_has_fulltext": true
+                },
+                "authorships": [
+                    {
+                        "author_position": "first",
+                        "author": {
+                            "id": "https://openalex.org/A99999999",
+                            "display_name": "Beatrix Potter",
+                            "orcid": "https://orcid.org/0000-0000-0000-0000"
+                        },
+                        "institutions": [
+                            {
+                                "id": "https://openalex.org/I193531525",
+                                "display_name": "George Washington University",
+                                "ror": "https://ror.org/00y4zzh67",
+                                "country_code": "US",
+                                "type": "education",
+                                "lineage": [
+                                    "https://openalex.org/I193531525"
+                                ]
+                            }
+                        ],
+                        "countries": [
+                            "US"
+                        ],
+                        "is_corresponding": true,
+                        "raw_author_name": "Beatrix Potter",
+                        "raw_affiliation_strings": [
+                            "George Washington University, UMD,UG"
+                        ]
+                    }
+                ],
+                "countries_distinct_count": 1,
+                "institutions_distinct_count": 1,
+                "corresponding_author_ids": [
+                    "https://openalex.org/A5074798942"
+                ],
+                "corresponding_institution_ids": [
+                    "https://openalex.org/I193531525"
+                ],
+                "apc_list": null,
+                "apc_paid": null,
+                "has_fulltext": false,
+                "cited_by_count": 2,
+                "cited_by_percentile_year": {
+                    "min": 76,
+                    "max": 79
+                },
+                "biblio": {
+                    "volume": null,
+                    "issue": null,
+                    "first_page": null,
+                    "last_page": null
+                },
+                "is_retracted": false,
+                "is_paratext": false,
+                "primary_topic": {
+                    
+                },
+                "topics": [
+                    
+                ],
+                "keywords": [
+                   
+                ],
+                "concepts": [
+                ],
+                "mesh": [],
+                "locations_count": 1,
+                "locations": [
+                    {
+                        "is_oa": true,
+                        "landing_page_url": "https://arxiv.org/abs/999999999",
+                        "pdf_url": null,
+                        "source": {
+                            "id": "https://openalex.org/S4306400194",
+                            "display_name": "arXiv (Cornell University)",
+                            "issn_l": null,
+                            "issn": null,
+                            "is_oa": true,
+                            "is_in_doaj": false,
+                            "host_organization": "https://openalex.org/I205783295",
+                            "host_organization_name": "Cornell University",
+                            "host_organization_lineage": [
+                                "https://openalex.org/I205783295"
+                            ],
+                            "host_organization_lineage_names": [
+                                "Cornell University"
+                            ],
+                            "type": "repository"
+                        },
+                        "license": "other-oa",
+                        "license_id": "https://openalex.org/licenses/other-oa",
+                        "version": "submittedVersion",
+                        "is_accepted": false,
+                        "is_published": false
+                    }
+                ],
+                "best_oa_location": {
+                    "is_oa": true,
+                    "landing_page_url": "https://arxiv.org/abs/999999",
+                    "pdf_url": null,
+                    "source": {
+                        "id": "https://openalex.org/S4306400194",
+                        "display_name": "arXiv (Cornell University)",
+                        "issn_l": null,
+                        "issn": null,
+                        "is_oa": true,
+                        "is_in_doaj": false,
+                        "host_organization": "https://openalex.org/I205783295",
+                        "host_organization_name": "Cornell University",
+                        "host_organization_lineage": [
+                            "https://openalex.org/I205783295"
+                        ],
+                        "host_organization_lineage_names": [
+                            "Cornell University"
+                        ],
+                        "type": "repository"
+                    },
+                    "license": "other-oa",
+                    "license_id": "https://openalex.org/licenses/other-oa",
+                    "version": "submittedVersion",
+                    "is_accepted": false,
+                    "is_published": false
+                },
+                "sustainable_development_goals": [],
+                "grants": [],
+                "datasets": [],
+                "versions": [],
+                "referenced_works_count": 5,
+                "referenced_works": [
+                    
+                ],
+                "related_works": [
+                   
+                ],
+                "ngrams_url": "https://api.openalex.org/works/W9999999999/ngrams",
+                "abstract_inverted_index": {
+                    
+                },
+                "cited_by_api_url": "https://api.openalex.org/works?filter=cites:W999999999999",
+                "counts_by_year": [
+                    {
+                        "year": 2016,
+                        "cited_by_count": 1
+                    },
+                    {
+                        "year": 2015,
+                        "cited_by_count": 1
+                    }
+                ],
+                "updated_date": "2024-05-13T09:25:48.616000",
+                "created_date": "2016-06-24"
+            }
+        ],
+        "group_by": []
+    }

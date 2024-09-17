@@ -1,0 +1,246 @@
+[
+    {
+        "original_string": "Lenard R. Roman, Wilfred R Donovan, Olene Beard, Denisse L Collins",
+        "parsed_result": "1_Lenard|R.|Roman;2_Wilfred|R|Donovan;3_Olene||Beard;4_Denisse|L|Collins",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": true,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Evans, J.",
+        "parsed_result": "1_|J|Evans",
+        "name_order": "last-first",
+        "multiple_authors": false,
+        "initials_only": true,
+        "author_separator": "",
+        "includes_initials": "",
+        "name_separator": "comma",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Galloway JM, Rodriguez JJ, Torres BM, Frank CA, Norman K, Mayer N, Rose MJ, Allison TM, Chandler JA.",
+        "parsed_result": "1_|JM|Galloway;2_|JJ|Rodriguez;3_|BM|Torres;4_|CA|Frank;5_|K|Norman;6_|N|Mayer;7_|MJ|Rose;8_|TM|Allison;9_|JA|Chandler",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": "",
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Horn, F., Christian, D. J., Mccarthy, L. C.,  Preston, L. ",
+        "parsed_result": "1_|F.|Horn;2_|D.J.|Christian;3_|L.C.|Mccarthy;4_|L.|Preston",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": "",
+        "name_separator": "comma",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Jesusa Berg",
+        "parsed_result": "1_Jesusa||Berg",
+        "name_order": "first-first",
+        "multiple_authors": false,
+        "initials_only": false,
+        "author_separator": "",
+        "includes_initials": false,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Loida Underwood MPH, Karly Marshall DO, MPH, Benny Britt MPH, Rene A. Bell MD, MPH, MEd, Delbert Haley MD",
+        "parsed_result": "1_Loida||Underwood;2_Karly||Marshall;3_Benny||Britt;4_Rene|A.|Bell;5_Delbert||Haley",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": true,
+        "name_separator": null,
+        "includes_degrees": true
+    },
+    {
+        "original_string": "Tristan Moss, Kory Hull, Gerry Strickland",
+        "parsed_result": "1_Tristan||Moss;2_Kory||Hull;3_Gerry||Strickland",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": false,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Lucas, Van; Best, Reyes; Noel, Walker; Long, Cordia; Long, Ela; Blake, Lucasia; Frank,Sherwood; Cook, Jonathon; Haynes, Wilson; Mcclain, Sheryll",
+        "parsed_result": "1_Van||Lucas;2_Reyes||Best;3_Walker||Noel;4_Cordia||Long;5_Ela||Long;6_Lucasia||Blake;7_Sherwood||Frank;8_Jonathon||Cook;9_Wilson||Haynes;10_Sheryll||Mcclain",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "semicolon",
+        "includes_initials": false,
+        "name_separator": "comma",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "K.B. Nash",
+        "parsed_result": "1_|K.B.|Nash",
+        "name_order": "first-first",
+        "multiple_authors": false,
+        "initials_only": true,
+        "author_separator": "",
+        "includes_initials": "",
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "E. Zamora, B. Nolan, P. Dawson, J. Wilkerson, G. Chaney, S. Clements",
+        "parsed_result": "1_|E.|Zamora;2_|B.|Nolan;3_|P.|Dawson;4_|J.|Wilkerson;5_|G.|Chaney;6_|S.|Clements",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": "",
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Johnston G;Sears T; Mckenzie M; Cotton I; Carrillo A; Mcknight R; Lowe F; Day L.",
+        "parsed_result": "1_|G|Johnston;2_|T|Sears;3_|M|Mckenzie;4_|I|Cotton;5_|A|Carrillo;6_|R|Mcknight;7_|F|Lowe;8_|L|Day",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "semicolon",
+        "includes_initials": "",
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Shaw, Wen H., Abbott, Valene H., Mccoy, Chia C.",
+        "parsed_result": "1_Wen|H.|Shaw;2_Valene|H.|Abbott;3_Chia|C|Mccoy",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": true,
+        "name_separator": "comma",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Sosa, G. D., Ford, J. R., Flynn, R. H.,  Ford, T. T.",
+        "parsed_result": "1_|G.D.|Sosa;2_|J.R.|Ford;3_|R.H.|Flynn;4_|T.T|Ford",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": "",
+        "name_separator": "comma",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Clarine L. Parks, Eaton, J.",
+        "parsed_result": "1_Clarine|L.|Parks;2_|J|Eaton",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": true,
+        "name_separator": "mixed",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Bright, MA, Lang JB, Waters DE",
+        "parsed_result": "1_|MA|Bright;2_|JB|Lang;3_|DE|Waters",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": "",
+        "name_separator": "mixed",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Ulysses Mills, Norris, Hiroko, Ronnie Millsburn, Crysta Weber, Emile Strong, Bruno Mcneil",
+        "parsed_result": "1_Ulysses||Mills;2_Hiroko||Norris;3_Ronnie||Millsburn;4_Crysta||Weber;5_Emile||Strong;6_Bruno||Mcneil",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": false,
+        "name_separator": "mixed",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Wolfe, S., A. Thomas",
+        "parsed_result": "1_|S.|Wolfe;2_|A.|Thomas",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": "",
+        "name_separator": "mixed",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Eloy Clemons, MD; Richie Payne, MD",
+        "parsed_result": "1_Eloy||Clemons;2_Richie||Payne",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "semicolon",
+        "includes_initials": false,
+        "name_separator": null,
+        "includes_degrees": true
+    },
+    {
+        "original_string": "Haywood, Tyrell Minh-Leo, Nichelle Wilhemina, Billie Celinda",
+        "parsed_result": "1_Tyrell Minh-Leo||Haywood;2_Nichelle||Wilhemina;3_Billie||Celinda",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": false,
+        "name_separator": "mixed",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Anibal, Carl, Clelia Arron, and Odell Argelia",
+        "parsed_result": "1_Carl||Anibal;2_Clelia||Arron;3_Odell||Argelia",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": false,
+        "name_separator": "mixed",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "W.D. Hsiu, J.M Kerry, C.C. Jacqulyn, and M.A. Ron",
+        "parsed_result": "1_|W.D.|Hsiu;2_|J.M|Kerry;3_|C.C.|Jacqulyn;4_|M.A.|Ron",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": null,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Aubrey Denyse, Kai Eldridge, Zhszeí Berry, Kary Demetrius, Keneth Möpshy",
+        "parsed_result": "1_Aubrey||Denyse;2_Kai||Eldridge;3_Zhszeí||Berry;4_Kary||Demetrius;5_Keneth||Möpshy",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": null,
+        "name_separator": null,
+        "includes_degrees": false
+    }
+ 
+  
+]

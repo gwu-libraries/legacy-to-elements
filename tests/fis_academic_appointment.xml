@@ -1,0 +1,21 @@
+<resultset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <row>
+	<field name="gw_id">G123456789</field>
+	<field name="college">Lilypad College</field>
+	<field name="department">Piscatology</field>
+	<field name="title">Professor of Piscatology</field>
+	<field name="start_term">Fall 2002</field>
+	<field name="end_term">Ongoing</field>
+	<field name="rank">Professor</field>
+  </row>
+
+  <row>
+	<field name="gw_id">G123456789</field>
+	<field name="college">Lilypad College</field>
+	<field name="department">Piscatology</field>
+	<field name="title">Professor</field>
+	<field name="start_term">Fall 2000</field>
+	<field name="end_term">Fall 2002</field>
+	<field name="rank">Professor</field>
+  </row>
+  </resultset>

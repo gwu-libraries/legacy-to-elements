@@ -1,0 +1,18 @@
+<resultset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<row>
+	<field name="first_name">Jeremy</field>
+	<field name="middle_name" xsi:nil="true"></field>
+	<field name="last_name">Fisher</field>
+	<field name="alternate_name" xsi:nil="true"/>
+	<field name="orcid_id" xsi:nil="true"/>
+	<field name="linkdin" xsi:nil="true"/>
+	<field name="gw_id">G123456789</field>
+	<field name="personal_statement">Jeremy Fisher loves fishing, though he is hapless at it.</field>
+	<field name="home_college">Lilypad College</field>
+	<field name="home_department">Piscatology</field>
+	<field name="research_areas">"Trout","Bass"</field>
+	<field name="role">Faculty</field>
+	<field name="languages_known"/>
+	<field name="languages_other" xsi:nil="true"/>
+  </row>
+<result_set>
