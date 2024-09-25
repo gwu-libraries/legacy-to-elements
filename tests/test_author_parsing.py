@@ -1,5 +1,5 @@
 import pytest
-from name_parser import AuthorParser
+from lyterati_utils.name_parser import AuthorParser
 import json
 
 @pytest.fixture()

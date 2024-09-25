@@ -3,6 +3,7 @@ from lark import Lark, Tree, Transformer, v_args, Token
 from lark.visitors import Transformer_InPlace
 from lark.exceptions import UnexpectedCharacters, UnexpectedEOF
 from typing import Iterator, Optional
+from .author_grammar import AUTHOR_GRAMMAR
 import re
 
 # Retain capitalization of these strings
@@ -90,16 +91,15 @@ class AuthorParser:
         '''
         :param pre_clean: whether to perform pre-parsing steps on the string (removes extraneous punctuation, title cases words in all caps, etc.)
         '''
-        with open('./author-grammar.txt') as f:
-            self.AUTHOR_GRAMMAR = f.read()
-            self.parser = Lark(self.AUTHOR_GRAMMAR, start='authors', ambiguity='explicit', regex=True)
-            self.errors = []
-            self.parsed = []
-            self.pre_clean = pre_clean
-            if pre_clean:
-                self.punct = re.compile(r'[.,;:]$')
-                self.degrees = re.compile(SUFFIXES)
-                self.capital_names = re.compile(r'[A-Z]{3,}')
+
+        self.parser = Lark(AUTHOR_GRAMMAR, start='authors', ambiguity='explicit', regex=True)
+        self.errors = []
+        self.parsed = []
+        self.pre_clean = pre_clean
+        if pre_clean:
+            self.punct = re.compile(r'[.,;:]$')
+            self.degrees = re.compile(SUFFIXES)
+            self.capital_names = re.compile(r'[A-Z]{3,}')
     
     def _pre_clean(self, names: str) -> str:
         '''Performs basic string cleaning before parsing.'''

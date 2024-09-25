@@ -1,0 +1,36 @@
+http://www.panstanford.com/books/9789814411677.html
+url,isbn,9789814411677
+822 pages. ISBN: 978-981-4411-67-7 (Hardcover); 978-981-4411-68-4 (eBook);
+txt,isbn,978-981-4411-67-7
+http://www.cambridge.org/us/academic/subjects/management/business-ethics/role-business-responsibility-protect?format=HB&isbn=9781107156128#oB2TDhy9LxPvjC24.97
+url,isbn,9781107156128
+Electronic ISBN: 978-1-4577-2109-0_x000D_ Print ISBN: 978-1-4577-2108-3_x000D_ CD-ROM ISBN: 978-1-4577-2106-9_x000D_ Online ISBN: 978-1-4577-2107-6
+txt,isbn,978-1-4577-2109-0
+ISBN:978-1-5386-6570
+txt,isbn,
+ISBN : 978-93-5062-182-0; edited by R.K. Jain, B.A. Metri, and J.N.D. Gupta, New Delhi: Excel Books, 2013.
+txt,isbn,978-93-5062-182-0
+https://www.elgaronline.com/display/book/9781800378766/9781800378766.xml
+url,isbn,9781800378766
+ISBN : null,2004.  Eds: E.J. Dudewicz, B.L. Golden, Z. Govindarajulu. American Sciences Press. Columbus, OH, Also appeared in: American Journal of Mathematical and Management Sciences 23 (1-2), 109-142, 2003.
+txt,isbn,
+Report 38/2018, 2018, 31.
+txt,isbn,
+https://www.palgrave.com/gp/book/9783030117108
+url,isbn,9783030117108
+http://www.cambridge.org/us/academic/subjects/management/business-ethics/role-business-responsibility-protect?format=HB&isbn=9781107156128#oB2TDhy9LxPvjC24.97
+url,isbn,9781107156128
+http://www.jblearning.com/catalog/9781284078107/
+url,isbn,9781284078107
+http://link.springer.com/referenceworkentry/10.1007/978-94-007-6178-0_101012-1
+url,isbn,978-94-007-6178-0
+ISBN : ISBN: 9781584886624, ISBN 10: 1584886625,Editors A. J. Plaza, C.I. Chang, Volume 16, New York, Chapman & Hall/CRC Computer & Information Science Series, 2007, pps. 496.
+txt,isbn,9781584886624
+ISBN : 0-12-480874-3,edited by G. Bertotti and I. D. Mayergoyz, Hardbound, ACADEMIC PRESS 2005
+txt,isbn,
+ISBN : 1-59237-115-9/978-1-59237-115-0,July 2008 2nd ed. Millerton, NY: Gray House Publishing, two volumes, hardcover, 800 pages
+txt,isbn,978-1-59237-115-0
+ISBN : 978-0-7391-6946-9_x000D_
+txt,isbn,978-0-7391-6946-9
+http://dx.doi.org/https://link.springer.com/chapter/10.1007/978-3-319-71538-4_6
+url,isbn,978-3-319-71538-4

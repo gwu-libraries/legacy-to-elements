@@ -1,3 +1,4 @@
+AUTHOR_GRAMMAR = '''
 authors: single_author
   | multiple_authors
 
@@ -26,3 +27,4 @@ DEGREE: /MPH|DO|MD|MEd|FACP|MScPT|EdD|MS|PhD/
 _WHITESPACE: /[ ]+/
 
 %ignore _WHITESPACE
+'''
