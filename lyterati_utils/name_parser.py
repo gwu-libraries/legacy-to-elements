@@ -7,7 +7,12 @@ from .author_grammar import AUTHOR_GRAMMAR
 import re
 
 # Retain capitalization of these strings
-SUFFIXES = r'MPH|DO|MD|MEd|FACP|MScPT|EdD|MS|PhD|III'
+SUFFIXES = r'MPH|DO|MD|MEd|FACP|MScPT|EdD|MS|PhD|III|DNP|Dr|LCSW|MPP'
+
+# If the name contains one of these, don't treat it as a person name
+STOP_WORDS = ['Association', 'Institute', 'Director', 'Department', 'Faculty', 'Student', 'Research', 'Laboratory', 'Panel', 'Group', 'Inc', 'University', 'Organization', 'Foundation', 'Office', 'Medical', 'Health', 'System', 'Council', 'Fund', 'Club', 'USDA', 'Network', 'Philanthropy', 'Center', 'Librarian', 'Clinic', 'Government', 'Community', 'Practitioners', 'Services', 'Academic', 'Repository', 'Students', 'Members', 'School']
+
+TITLES = r'Professor|Dr\.?|Dean'
 
 def score(tree: Tree) -> int:
     '''
@@ -41,7 +46,7 @@ class Author:
     def name(self) -> str:
         '''Returns the name as a string, in first-name-first order'''
         return f'{" ".join(self.first_name)}|{"".join(self.initials)}|{" ".join(self.last_name)}'
-
+    
     @name.setter
     def name(self, value):
         # lfo, second name seen
@@ -95,6 +100,8 @@ class AuthorParser:
         self.parser = Lark(AUTHOR_GRAMMAR, start='authors', ambiguity='explicit', regex=True)
         self.errors = []
         self.parsed = []
+        self.stop_words = set(STOP_WORDS)
+        self.titles = re.compile(TITLES)
         self.pre_clean = pre_clean
         if pre_clean:
             self.punct = re.compile(r'[.,;:]$')
@@ -110,6 +117,22 @@ class AuthorParser:
             if not self.degrees.match(name):
                 names = names.replace(name, name.title())
         return names
+
+    def _post_clean(self, authors: list[Author]) -> list[Author]:
+        '''Does post-parsing cleanup, including merging names for corporate entities into the last_name field'''
+        for i, author in enumerate(authors):
+            if (self.stop_words & set(author.last_name)) or  (self.stop_words & set(author.first_name)):
+                authors[i].last_name = authors[i].first_name + authors[i].initials + authors[i].last_name
+                authors[i].first_name = []
+                authors[i].initials = []
+                continue
+            # Check for initial titles
+            # If we have only title and last name, the name will be blank
+            if author.first_name and self.titles.match(author.first_name[0]):
+                authors[i].first_name.pop(0)
+                if not authors[i].first_name and not author.initials:
+                    authors[i].last_name = []               
+        return [a for a in authors if a.last_name]
 
 
     def parse_one(self, names: str) -> tuple[Optional[list[Author]], Optional[dict[str, str]]]:
@@ -132,7 +155,7 @@ class AuthorParser:
         for i, names in enumerate(list_of_names):
             result, error = self.parse_one(names)
             if result:
-                yield {i: result}
+                yield {i: self._post_clean(result)}
             else:
                 error.update({'index': i})
                 self.errors.append(error)

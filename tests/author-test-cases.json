@@ -240,7 +240,51 @@
         "includes_initials": null,
         "name_separator": null,
         "includes_degrees": false
+    },
+    {
+        "original_string": "Taiwan Industrial Hygiene Association",
+        "parsed_result": "1_||Taiwan Industrial Hygiene Association",
+        "name_order": "first-first",
+        "multiple_authors": false,
+        "initials_only": false,
+        "author_separator": "",
+        "includes_initials": null,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Denver Angle, PhD, Mathew L. Wyatt, PhD, Brande Kamala, MD, MPP, Cordell Yung Sandee, PhD, Chi E. Moon, MD, Monty Guillermo, PhD,",
+        "parsed_result": "1_Denver||Angle;2_Mathew|L.|Wyatt;3_Brande||Kamala;4_Cordell Yung||Sandee;5_Chi|E.|Moon;6_Monty||Guillermo",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": true,
+        "name_separator": null,
+        "includes_degrees": true
+    },
+
+    {
+        "original_string": "Denver Angle, PhD",
+        "parsed_result": "1_Denver||Angle",
+        "name_order": "first-first",
+        "multiple_authors": false,
+        "initials_only": false,
+        "author_separator": null,
+        "includes_initials": true,
+        "name_separator": null,
+        "includes_degrees": true
+    },
+    {
+        "original_string": "Dr Raymond Turner",
+        "parsed_result": "1_Raymond||Turner",
+        "name_order": "first-first",
+        "multiple_authors": false,
+        "initials_only": false,
+        "author_separator": null,
+        "includes_initials": false,
+        "name_separator": null,
+        "includes_degrees": false
     }
  
-  
 ]

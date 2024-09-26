@@ -1,4 +1,4 @@
-from name_parser import AuthorParser
+from .name_parser import AuthorParser
 import json
 from mimesis import Person
 from mimesis.locales import Locale
@@ -42,6 +42,7 @@ def parse_string(name_str):
     if error:
         print(error)
     else:
+        result = parser._post_clean(result)
         print(';'.join([f'{i+1}_{author.name}' for i, author in enumerate(result)]))
 
 def replace_non_ascii(match):

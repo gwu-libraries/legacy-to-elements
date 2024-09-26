@@ -7,6 +7,7 @@ from pathlib import Path
 from lxml import etree
 import logging
 from datetime import datetime
+from lyterati_utils.doi_parser import Parser
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -51,10 +52,10 @@ def load_lyterati_report(path_to_lyterati_file: str) -> DataFrame:
     df['school_code'] = school_code
     df['report_code'] = report_code
     df.columns = [c.lower().replace(' ', '_') for c in df.columns] # normalize column name formatting
-    return df
+    return df.drop_duplicates() # Remove exact duplicate entries within each report
 
-def load_reports(path_to_lyterati_files: str, map_report_types: bool=True, subset: Optional[list]=None) -> DataFrame:
-    '''Given a path to a directory containing Lyterati reports, which may be in CSV or Excel format, it will load either all files of those formats, or only those whose names are provided in the optional subset list. If the max_report_types argument is supplied,the LYTERATI_TYPE_MAPPING will be used to add the report category as an additional column. All files are concatenated into a single DataFrame.'''
+def load_reports(path_to_lyterati_files: str, map_report_types: bool=True, exclude: Optional[list]=None) -> DataFrame:
+    '''Given a path to a directory containing Lyterati reports, which may be in CSV or Excel format, it will load either all files of those formats, or only those whose names not in the optional exclude list. If the map_report_types argument is supplied,the LYTERATI_TYPE_MAPPING will be used to add the report category as an additional column. All files are concatenated into a single DataFrame.'''
     path_to_lyterati_files = Path(path_to_lyterati_files)
     reports = pd.DataFrame()
     if map_report_types:
@@ -64,7 +65,8 @@ def load_reports(path_to_lyterati_files: str, map_report_types: bool=True, subse
     for file in list(path_to_lyterati_files.glob('*.xlsx')) + list(path_to_lyterati_files.glob('*.csv')):
         if file.stem.startswith('_'):
             continue # skip files that start with an underscore
-        if not subset or file.stem in subset:
+        # Skip files that match values passed in with the --exclude cli option
+        if not exclude or not [f for f in exclude if f.lower() in file.stem.lower()]:
             df = load_lyterati_report(str(file))
             if report_type_mapping:
                 try:
@@ -93,6 +95,8 @@ def save_reports(reports: DataFrame, path_to_save_reports: str, by_category: boo
     if by_category:
         for category in reports.category.unique():
             df = reports.loc[reports.category == category]
+            # Drop null columns
+            df = df.dropna(axis=1, how='all')
             file = path_to_save_reports / f'lyterati_data_for_{category}_{ts}.csv'
             logger.info(f'Saving report to {file}')
             df.to_csv(file, index=False)
@@ -131,13 +135,36 @@ def load_mapping(path_to_lyterati_reports: str) -> dict[str, list[str]]:
         return { _type: category for category, list_of_types in mapping.items() 
                 for _type in list_of_types }
 
-if __name__ == '__main__':
-    
-    ids = load_ids_from_profiles('./data/lyterati-xml/expert-finder-feed')
-    reports = load_reports('./data/lyterati-exports')
+def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
+    '''Given a DataFrame representing Lyterati reports, and a path to an additional file (CSV or Excel) that contains missing ID's mapped to the MERGE_FIELDS columns in the reports DataFrame, add those ID's to the DataFrame.'''
+
+def parse_names(name_str: str) -> Optional[list[dict[str, str]]]:
+    '''Parses a string containing multiple person names, returning either a list of dictionaries, where each dictionary contains the parts of the name, or else None, if the string could not be parsed.'''
+
+
+
+@click.group()
+def cli():
+    pass
+
+@cli.command()
+@click.option('--id-source', default='./data/lyterati-xml/expert-finder-feed')
+@click.option('--data-source', default='./data/lyterati-exports')
+@click.option('--target', default='./data/to-migrate')
+@click.option('--exclude', '-e', multiple=True)
+def prep_lyterati_reports(id_source, data_source, target, exclude):
+    '''Values passed to --exclude/-e should correspond to the part of the filename designating either a school or a type of report. For instance, -e grants will exclude all files with "grants" or "Grants" in the title. Matching is case-insensitive.'''
+    ids = load_ids_from_profiles(id_source)
+    reports = load_reports(data_source)
     if reports.empty:
         logger.error('Unable to finish processing reports. Please fix the errors flagged in the log.')
         exit()    
     reports = merge_ids_with_reports(reports, ids, PROFILE_FIELD_MAP)
-    save_reports(reports, './data/to-migrate')
+    save_reports(reports, target)
+
+
+
+if __name__ == '__main__':
+    cli()
+    
 

@@ -1,6 +1,7 @@
 click==8.1.7
 Jinja2==3.1.4
-lark==1.1.9
+lark==1.2.2
+mimesis==18.0.0
 openpyxl==3.1.5
 regex==2024.7.24
 requests==2.31.0
