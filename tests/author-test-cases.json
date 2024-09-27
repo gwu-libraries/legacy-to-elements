@@ -1,7 +1,7 @@
 [
     {
         "original_string": "Lenard R. Roman, Wilfred R Donovan, Olene Beard, Denisse L Collins",
-        "parsed_result": "1_Lenard|R.|Roman;2_Wilfred|R|Donovan;3_Olene||Beard;4_Denisse|L|Collins",
+        "parsed_result": "1_Lenard|R|Roman;2_Wilfred|R|Donovan;3_Olene||Beard;4_Denisse|L|Collins",
         "name_order": "first-first",
         "multiple_authors": true,
         "initials_only": false,
@@ -34,7 +34,7 @@
     },
     {
         "original_string": "Horn, F., Christian, D. J., Mccarthy, L. C.,  Preston, L. ",
-        "parsed_result": "1_|F.|Horn;2_|D.J.|Christian;3_|L.C.|Mccarthy;4_|L.|Preston",
+        "parsed_result": "1_|F|Horn;2_|DJ|Christian;3_|LC|Mccarthy;4_|L|Preston",
         "name_order": "last-first",
         "multiple_authors": true,
         "initials_only": true,
@@ -56,7 +56,7 @@
     },
     {
         "original_string": "Loida Underwood MPH, Karly Marshall DO, MPH, Benny Britt MPH, Rene A. Bell MD, MPH, MEd, Delbert Haley MD",
-        "parsed_result": "1_Loida||Underwood;2_Karly||Marshall;3_Benny||Britt;4_Rene|A.|Bell;5_Delbert||Haley",
+        "parsed_result": "1_Loida||Underwood;2_Karly||Marshall;3_Benny||Britt;4_Rene|A|Bell;5_Delbert||Haley",
         "name_order": "first-first",
         "multiple_authors": true,
         "initials_only": false,
@@ -89,7 +89,7 @@
     },
     {
         "original_string": "K.B. Nash",
-        "parsed_result": "1_|K.B.|Nash",
+        "parsed_result": "1_|KB|Nash",
         "name_order": "first-first",
         "multiple_authors": false,
         "initials_only": true,
@@ -100,7 +100,7 @@
     },
     {
         "original_string": "E. Zamora, B. Nolan, P. Dawson, J. Wilkerson, G. Chaney, S. Clements",
-        "parsed_result": "1_|E.|Zamora;2_|B.|Nolan;3_|P.|Dawson;4_|J.|Wilkerson;5_|G.|Chaney;6_|S.|Clements",
+        "parsed_result": "1_|E|Zamora;2_|B|Nolan;3_|P|Dawson;4_|J|Wilkerson;5_|G|Chaney;6_|S|Clements",
         "name_order": "first-first",
         "multiple_authors": true,
         "initials_only": true,
@@ -122,7 +122,7 @@
     },
     {
         "original_string": "Shaw, Wen H., Abbott, Valene H., Mccoy, Chia C.",
-        "parsed_result": "1_Wen|H.|Shaw;2_Valene|H.|Abbott;3_Chia|C|Mccoy",
+        "parsed_result": "1_Wen|H|Shaw;2_Valene|H|Abbott;3_Chia|C|Mccoy",
         "name_order": "last-first",
         "multiple_authors": true,
         "initials_only": false,
@@ -133,7 +133,7 @@
     },
     {
         "original_string": "Sosa, G. D., Ford, J. R., Flynn, R. H.,  Ford, T. T.",
-        "parsed_result": "1_|G.D.|Sosa;2_|J.R.|Ford;3_|R.H.|Flynn;4_|T.T|Ford",
+        "parsed_result": "1_|GD|Sosa;2_|JR|Ford;3_|RH|Flynn;4_|TT|Ford",
         "name_order": "last-first",
         "multiple_authors": true,
         "initials_only": true,
@@ -144,7 +144,7 @@
     },
     {
         "original_string": "Clarine L. Parks, Eaton, J.",
-        "parsed_result": "1_Clarine|L.|Parks;2_|J|Eaton",
+        "parsed_result": "1_Clarine|L|Parks;2_|J|Eaton",
         "name_order": "mixed",
         "multiple_authors": true,
         "initials_only": false,
@@ -177,7 +177,7 @@
     },
     {
         "original_string": "Wolfe, S., A. Thomas",
-        "parsed_result": "1_|S.|Wolfe;2_|A.|Thomas",
+        "parsed_result": "1_|S|Wolfe;2_|A|Thomas",
         "name_order": "mixed",
         "multiple_authors": true,
         "initials_only": true,
@@ -221,7 +221,7 @@
     },
     {
         "original_string": "W.D. Hsiu, J.M Kerry, C.C. Jacqulyn, and M.A. Ron",
-        "parsed_result": "1_|W.D.|Hsiu;2_|J.M|Kerry;3_|C.C.|Jacqulyn;4_|M.A.|Ron",
+        "parsed_result": "1_|WD|Hsiu;2_|JM|Kerry;3_|CC|Jacqulyn;4_|MA|Ron",
         "name_order": "first-first",
         "multiple_authors": true,
         "initials_only": true,
@@ -254,7 +254,7 @@
     },
     {
         "original_string": "Denver Angle, PhD, Mathew L. Wyatt, PhD, Brande Kamala, MD, MPP, Cordell Yung Sandee, PhD, Chi E. Moon, MD, Monty Guillermo, PhD,",
-        "parsed_result": "1_Denver||Angle;2_Mathew|L.|Wyatt;3_Brande||Kamala;4_Cordell Yung||Sandee;5_Chi|E.|Moon;6_Monty||Guillermo",
+        "parsed_result": "1_Denver||Angle;2_Mathew|L|Wyatt;3_Brande||Kamala;4_Cordell Yung||Sandee;5_Chi|E|Moon;6_Monty||Guillermo",
         "name_order": "first-first",
         "multiple_authors": true,
         "initials_only": false,
@@ -285,6 +285,72 @@
         "includes_initials": false,
         "name_separator": null,
         "includes_degrees": false
+    },
+    {
+        "original_string": "Denver JR, Virgil SA, Rickey, LC, Ben RG, Sid KDS",
+        "parsed_result": "1_|JR|Denver;2_|SA|Virgil;3_|LC|Rickey;4_|RG|Ben;5_|KDS|Sid",
+        "name_order": "last-first",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": false,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "GW Sports Marketing Association",
+        "parsed_result": "1_||GW Sports Marketing Association",
+        "name_order": "first-first",
+        "multiple_authors": false,
+        "initials_only": false,
+        "author_separator": null,
+        "includes_initials": true,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "DARCY McCLINTOCK With Francisco Vallas",
+        "parsed_result": "1_Darcy||McClintock;2_Francisco||Vallas",
+        "name_order": "first-first",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "with",
+        "includes_initials": false,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Benito LA, Edgardo JA, Brad C, Philip EW, AR Merrill, Jr",
+        "parsed_result": "1_|LA|Benito;2_|JA|Edgardo;3_|C|Brad;4_|EW|Philip;5_|AR|Merrill Jr",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": true,
+        "author_separator": "comma",
+        "includes_initials": false,
+        "name_separator": null,
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Benito, Larry, Edgardo, John, Brad, Charles, Philip, Edgar, Andrew R. Merrill, Jr",
+        "parsed_result": "1_Larry||Benito;2_John||Edgardo;3_Charles||Brad;4_Edgar||Philip;5_Andrew|R|Merrill Jr",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": true,
+        "name_separator": "comma",
+        "includes_degrees": false
+    },
+    {
+        "original_string": "Benito LA, Edgardo J, Charles BC, Philip EG, Merrill AR Jr",
+        "parsed_result": "1_|LA|Benito;2_|J|Edgardo;3_|BC|Charles;4_|EG|Philip;5_|AR|Merrill Jr",
+        "name_order": "mixed",
+        "multiple_authors": true,
+        "initials_only": false,
+        "author_separator": "comma",
+        "includes_initials": true,
+        "name_separator": "comma",
+        "includes_degrees": false
     }
- 
+   
 ]

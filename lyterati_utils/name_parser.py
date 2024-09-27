@@ -4,15 +4,17 @@ from lark.visitors import Transformer_InPlace
 from lark.exceptions import UnexpectedCharacters, UnexpectedEOF
 from typing import Iterator, Optional
 from .author_grammar import AUTHOR_GRAMMAR
-import re
+import regex
 
 # Retain capitalization of these strings
-SUFFIXES = r'MPH|DO|MD|MEd|FACP|MScPT|EdD|MS|PhD|III|DNP|Dr|LCSW|MPP'
+ACRONYMS = r'MPH|DO|MD|FACP|MS|III|DNP|LCSW|MPP|EPFL'
 
 # If the name contains one of these, don't treat it as a person name
 STOP_WORDS = ['Association', 'Institute', 'Director', 'Department', 'Faculty', 'Student', 'Research', 'Laboratory', 'Panel', 'Group', 'Inc', 'University', 'Organization', 'Foundation', 'Office', 'Medical', 'Health', 'System', 'Council', 'Fund', 'Club', 'USDA', 'Network', 'Philanthropy', 'Center', 'Librarian', 'Clinic', 'Government', 'Community', 'Practitioners', 'Services', 'Academic', 'Repository', 'Students', 'Members', 'School']
 
 TITLES = r'Professor|Dr\.?|Dean'
+
+SUFFIXES = r'Jr\.?|III'
 
 def score(tree: Tree) -> int:
     '''
@@ -101,12 +103,15 @@ class AuthorParser:
         self.errors = []
         self.parsed = []
         self.stop_words = set(STOP_WORDS)
-        self.titles = re.compile(TITLES)
+        self.titles = regex.compile(TITLES)
+        self.suffixes = regex.compile(SUFFIXES)
+
         self.pre_clean = pre_clean
         if pre_clean:
-            self.punct = re.compile(r'[.,;:]$')
-            self.degrees = re.compile(SUFFIXES)
-            self.capital_names = re.compile(r'[A-Z]{3,}')
+            self.punct = regex.compile(r'[.,;:]$')
+            self.acronyms = regex.compile(ACRONYMS)
+            self.capital_names = regex.compile(r'[\p{Lu}]{4,}')
+
     
     def _pre_clean(self, names: str) -> str:
         '''Performs basic string cleaning before parsing.'''
@@ -114,15 +119,18 @@ class AuthorParser:
         if self.punct.search(names):
             names = names[:-1]
         for name in self.capital_names.findall(names):
-            if not self.degrees.match(name):
+            if not self.acronyms.match(name):
                 names = names.replace(name, name.title())
         return names
 
     def _post_clean(self, authors: list[Author]) -> list[Author]:
         '''Does post-parsing cleanup, including merging names for corporate entities into the last_name field'''
         for i, author in enumerate(authors):
+            # Check for corporate author
             if (self.stop_words & set(author.last_name)) or  (self.stop_words & set(author.first_name)):
-                authors[i].last_name = authors[i].first_name + authors[i].initials + authors[i].last_name
+                authors[i].last_name = authors[i].first_name + [''.join(authors[i].initials)] + authors[i].last_name
+                # Remove empty initials slot
+                authors[i].last_name = [n for n in authors[i].last_name if n]
                 authors[i].first_name = []
                 authors[i].initials = []
                 continue
@@ -131,7 +139,15 @@ class AuthorParser:
             if author.first_name and self.titles.match(author.first_name[0]):
                 authors[i].first_name.pop(0)
                 if not authors[i].first_name and not author.initials:
-                    authors[i].last_name = []               
+                    authors[i].last_name = []
+                    continue
+            # Remove periods from initials
+            authors[i].initials = [initial.replace('.', '') for initial in author.initials]
+            # Check for cases where the name suffix has been parsed as the last name
+            if (len(authors[i].last_name) == 1) and (self.suffixes.match(authors[i].last_name[0])):
+                # Assume the last name has been treated as the first name by the parser
+                authors[i].last_name = authors[i].first_name + authors[i].last_name
+                authors[i].first_name = []
         return [a for a in authors if a.last_name]
 
 

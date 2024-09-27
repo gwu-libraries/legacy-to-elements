@@ -8,6 +8,8 @@ from lxml import etree
 import logging
 from datetime import datetime
 from lyterati_utils.doi_parser import Parser
+from lyterati_utils.name_parser import AuthorParser
+import regex
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -137,11 +139,70 @@ def load_mapping(path_to_lyterati_reports: str) -> dict[str, list[str]]:
 
 def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
     '''Given a DataFrame representing Lyterati reports, and a path to an additional file (CSV or Excel) that contains missing ID's mapped to the MERGE_FIELDS columns in the reports DataFrame, add those ID's to the DataFrame.'''
+    if path_to_id_map.endswith('csv'):
+        missing_ids = pd.read_csv(path_to_id_map)
+    else:
+        missing_ids = pd.read_excel(path_to_id_map)
+    # Identify the column that contains GWIDs
+    gwid_re = regex.compile(r'G[0-9]{8}')
+    for c in missing_ids.columns:
+        if missing_ids[c].str.match(gwid_re).all():
+            missing_ids = missing_ids.rename(columns={c: PROFILE_ID_FIELD})
+            break
+    if 'gw_id' not in missing_ids.columns:
+        logger.error(f'File {path_to_id_map} should contain a column of GWIDs, but no such column was found. Please correct the file and run the script again.')
+        return
+    matched = reports.merge(missing_ids, on=[c for c in missing_ids.columns if c != PROFILE_ID_FIELD], how='left')
+    matched[f'{PROFILE_ID_FIELD}_x'] = matched[f'{PROFILE_ID_FIELD}_x'].fillna(matched[f'{PROFILE_ID_FIELD}_y'])
+    matched = matched.rename(columns={f'{PROFILE_ID_FIELD}_x': f'{PROFILE_ID_FIELD}'}).drop(columns=f'{PROFILE_ID_FIELD}_y')
+    num_missing = len(matched.loc[matched[PROFILE_ID_FIELD].isnull()])
+    if num_missing > 0:
+        logger.warn(f'After merge, {num_missing} missing IDs remain.')
+    return matched
+    
 
-def parse_names(name_str: str) -> Optional[list[dict[str, str]]]:
-    '''Parses a string containing multiple person names, returning either a list of dictionaries, where each dictionary contains the parts of the name, or else None, if the string could not be parsed.'''
+def check_name_matches(user: dict[str, str], parsed_name: dict[str, str|list[str]]) -> bool:
+    '''Checks whether the parts of the provided user name match the parts of the provided parsed name. Surname must match, plus either first name or initials'''
+    if user['last_name'] == parsed_name['surname']:
+        # Case 1: first name is present, matches on all parts or first part (space-separated)
+        if parsed_name['first_name']:
+            if (user['first_name'] == ' '.join(parsed_name['first_name'])) or (user['first_name'] == parsed_name['first_name'][0]):
+                return True   
+        # If no first name in the parsed name, check initials  
+        else: 
+            if user['middle_name']:
+                initials = (user['first_name'][0] + user['middle_name'][0]).upper()
+            else:
+                initials = user['first_name'][0].upper()
+            # Case 2: First- and middle-initial match, or just first initial
+            if parsed_name['initials']:
+                if (initials == ''.join(parsed_name['initials'])) or (initials[0] == parsed_name['initials'][0]):
+                    return True
+        return False
 
-
+def parse_names(name_str: str, user_name: dict[str, str], parser: AuthorParser) -> Optional[list[dict[str, str]]]:
+    '''Parses a string containing multiple person names, returning either a list of dictionaries, where each dictionary contains the parts of the name, or else None, if the string could not be parsed. Match a provided user name against the parsed names. (Frequently, the user's name will be among those provided in the string.) If the string of names cannot be parsed, return only the user's name. If the user's name doesn't match the parsed names, append the user's name to the list.'''
+    result, error = parser.parse_one(name_str)
+    names_to_export = []
+    if result: 
+        result = parser._post_clean(result)
+        author_matched = False
+        for person in result:
+            surname = ' '.join(person.last_name)
+            if not author_matched and check_name_matches(user_name, {'first_name': person.first_name, 
+                                                                     'initials': person.initials, 
+                                                                     'surname': surname}):
+                author_matched = True
+            first_name = ' '.join(person.first_name)
+            if first_name and person.initials:
+                first_name += ' ' + ''.join(person.initials)
+            else:
+                first_name = ''.join(person.initials)
+            full_name = f'{first_name} {surname}' if first_name else surname
+            names_to_export.append({'first-name': first_name, 'surname': surname, 'full': full_name})
+    if not result or not author_matched:
+        names_to_export.append({'first-name': user_name['first_name'], 'surname': user_name['last_name']})
+    return names_to_export
 
 @click.group()
 def cli():

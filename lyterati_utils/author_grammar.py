@@ -4,7 +4,7 @@ authors: single_author
 
 multiple_authors: single_author "," (_WHITESPACE? single_author  ",")* _WHITESPACE? single_author 
   | single_author  ";" (_WHITESPACE? single_author ";")* _WHITESPACE? single_author 
-  | single_author ("," _WHITESPACE? single_author )* ","? _WHITESPACE "and" _WHITESPACE single_author 
+  | single_author ("," _WHITESPACE? single_author )* ","? _WHITESPACE ("and"|"with"|"And"|"With"|"&") _WHITESPACE single_author 
 
 
 single_author: author_name [_WHITESPACE initials] _WHITESPACE author_name degrees? -> an_full
@@ -12,17 +12,19 @@ single_author: author_name [_WHITESPACE initials] _WHITESPACE author_name degree
   | initials _WHITESPACE author_name degrees? -> an_init
   | author_name ("," | _WHITESPACE) initials degrees? -> an_init_lfo
 
-author_name: NAME_PART (_WHITESPACE NAME_PART)*
+author_name: NAME_PART (_WHITESPACE NAME_PART)* [","? _WHITESPACE SUFFIX]
 
 degrees: ("," | _WHITESPACE) DEGREE ("," _WHITESPACE? DEGREE)*
 
-initials: INITIAL [INITIAL]
+initials: INITIAL [INITIAL INITIAL?]
 
 INITIAL: /[A-Z]\.?/
 
+SUFFIX: /Jr\.?|III/
+
 NAME_PART: /((El|Von|De|Del) [\p{Lu}][\p{Ll}']+)|([\p{Lu}]([\p{Ll}]+[\p{Lu}])?[\p{Ll}']+(-[\p{Lu}]([\p{Ll}]+[\p{Lu}])?[\p{Ll}']+)?)/
 
-DEGREE: /MPH|DO|MD|MEd|FACP|MScPT|EdD|MS|PhD|MPP|DNP/
+DEGREE: /MPH|DO|MD|MEd|FACP|MScPT|EdD|MS|PhD|MPP|DN|LCSW|EPFL/
 
 _WHITESPACE: /[ ]+/
 
