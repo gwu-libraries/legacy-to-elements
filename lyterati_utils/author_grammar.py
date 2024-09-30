@@ -22,7 +22,7 @@ INITIAL: /[A-Z]\.?/
 
 SUFFIX: /Jr\.?|III/
 
-NAME_PART: /((El|Von|De|Del) [\p{Lu}][\p{Ll}']+)|([\p{Lu}]([\p{Ll}]+[\p{Lu}])?[\p{Ll}']+(-[\p{Lu}]([\p{Ll}]+[\p{Lu}])?[\p{Ll}']+)?)/
+NAME_PART: /((El|Von|De|Del|de|von|del|el|of) [\p{Lu}][\p{Ll}']+)|([\p{Lu}]([\p{Ll}]+[\p{Lu}])?[\p{Ll}']+(-[\p{Lu}]([\p{Ll}]+[\p{Lu}])?[\p{Ll}']+)?)/
 
 DEGREE: /MPH|DO|MD|MEd|FACP|MScPT|EdD|MS|PhD|MPP|DN|LCSW|EPFL/
 

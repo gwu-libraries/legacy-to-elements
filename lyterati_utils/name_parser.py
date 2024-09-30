@@ -10,9 +10,11 @@ import regex
 ACRONYMS = r'MPH|DO|MD|FACP|MS|III|DNP|LCSW|MPP|EPFL'
 
 # If the name contains one of these, don't treat it as a person name
-STOP_WORDS = ['Association', 'Institute', 'Director', 'Department', 'Faculty', 'Student', 'Research', 'Laboratory', 'Panel', 'Group', 'Inc', 'University', 'Organization', 'Foundation', 'Office', 'Medical', 'Health', 'System', 'Council', 'Fund', 'Club', 'USDA', 'Network', 'Philanthropy', 'Center', 'Librarian', 'Clinic', 'Government', 'Community', 'Practitioners', 'Services', 'Academic', 'Repository', 'Students', 'Members', 'School']
+CORPORATE_AUTHOR_WORDS = ['Association', 'Institute', 'Department', 'Faculty', 'Student', 'Research', 'Laboratory', 'Panel', 'Group', 'Inc', 'University', 'Organization', 'Foundation', 'Office', 'Medical', 'Health', 'System', 'Council', 'Fund', 'Club', 'USDA', 'Network', 'Philanthropy', 'Center', 'Librarian', 'Clinic', 'Government', 'Community', 'Practitioners', 'Services', 'Academic', 'Repository', 'Students', 'Members', 'School']
 
-TITLES = r'Professor|Dr\.?|Dean'
+STOP_WORDS = ['Director', 'Student']
+
+TITLES = r'Professor|Dr\.?|Dean|Mr\.?|Ms.?'
 
 SUFFIXES = r'Jr\.?|III'
 
@@ -102,6 +104,7 @@ class AuthorParser:
         self.parser = Lark(AUTHOR_GRAMMAR, start='authors', ambiguity='explicit', regex=True)
         self.errors = []
         self.parsed = []
+        self.corp_auth = set(CORPORATE_AUTHOR_WORDS)
         self.stop_words = set(STOP_WORDS)
         self.titles = regex.compile(TITLES)
         self.suffixes = regex.compile(SUFFIXES)
@@ -118,6 +121,9 @@ class AuthorParser:
         # Remove trailing punctuation
         if self.punct.search(names):
             names = names[:-1]
+        # Remove titles
+        names = regex.sub(self.titles, '', names)
+        # Convert names in all caps to title case
         for name in self.capital_names.findall(names):
             if not self.acronyms.match(name):
                 names = names.replace(name, name.title())
@@ -127,13 +133,16 @@ class AuthorParser:
         '''Does post-parsing cleanup, including merging names for corporate entities into the last_name field'''
         for i, author in enumerate(authors):
             # Check for corporate author
-            if (self.stop_words & set(author.last_name)) or  (self.stop_words & set(author.first_name)):
+            if (self.corp_auth & set(author.last_name)) or  (self.corp_auth & set(author.first_name)):
                 authors[i].last_name = authors[i].first_name + [''.join(authors[i].initials)] + authors[i].last_name
                 # Remove empty initials slot
                 authors[i].last_name = [n for n in authors[i].last_name if n]
                 authors[i].first_name = []
                 authors[i].initials = []
                 continue
+            # Check for stop words in author name
+            if (self.stop_words & set(author.last_name)) or (self.stop_words & set(author.first_name)):
+                authors[i].last_name = []
             # Check for initial titles
             # If we have only title and last name, the name will be blank
             if author.first_name and self.titles.match(author.first_name[0]):
