@@ -161,56 +161,7 @@ def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
     return matched
     
 
-def check_name_matches(user: dict[str, str], parsed_name: dict[str, str|list[str]]) -> bool:
-    '''Checks whether the parts of the provided user name match the parts of the provided parsed name. Surname must match, plus either first name or initials'''
-    if user['last_name'] == parsed_name['surname']:
-        # Case 1: first name is present, matches on all parts or first part (space-separated)
-        if parsed_name['first_name']:
-            if (user['first_name'] == ' '.join(parsed_name['first_name'])) or (user['first_name'] == parsed_name['first_name'][0]):
-                return True   
-        # If no first name in the parsed name, check initials  
-        else: 
-            if user['middle_name']:
-                initials = (user['first_name'][0] + user['middle_name'][0]).upper()
-            else:
-                initials = user['first_name'][0].upper()
-            # Case 2: First- and middle-initial match, or just first initial
-            if parsed_name['initials']:
-                if (initials == ''.join(parsed_name['initials'])) or (initials[0] == parsed_name['initials'][0]):
-                    return True
-        return False
 
-def parse_names(name_str: str, user_name: dict[str, str], parser: AuthorParser) -> Optional[list[dict[str, str]]]:
-    '''Parses a string containing multiple person names, returning either a list of dictionaries, where each dictionary contains the parts of the name, or else None, if the string could not be parsed. Match a provided user name against the parsed names. (Frequently, the user's name will be among those provided in the string.) If the string of names cannot be parsed, return only the user's name. If the user's name doesn't match the parsed names, append the user's name to the list.'''
-    match parser.parse_one(name_str):
-        # Can't parse name: return user's name
-        case None, error:
-            return {'first-name': user_name['first_name'], 
-                    'surname': user_name['last_name'], 
-                    'full': f'{user_name["first_name"]} {user_name["last_name"]}'}
-        case result, None:
-            names_to_export = []
-            result = parser._post_clean(result)
-            author_matched = False
-            for person in result:
-                surname = ' '.join(person.last_name)
-                if not author_matched and check_name_matches(user_name, {'first_name': person.first_name, 
-                                                                     'initials': person.initials, 
-                                                                     'surname': surname}):
-                    author_matched = True
-                first_name = ' '.join(person.first_name)
-                if first_name and person.initials:
-                    first_name += ' ' + ''.join(person.initials)
-                else:
-                    first_name = ''.join(person.initials)
-                full_name = f'{first_name} {surname}' if first_name else surname
-                names_to_export.append({'first-name': first_name, 'surname': surname, 'full': full_name})
-            # Append user name if not a match to any of the parsed person names
-            if not author_matched:
-                names_to_export.append({'first-name': user_name['first_name'], 
-                                        'surname': user_name['last_name'],
-                                        'full': f'{user_name["first_name"]} {user_name["last_name"]}'})
-            return names_to_export
 
 @click.group()
 def cli():
