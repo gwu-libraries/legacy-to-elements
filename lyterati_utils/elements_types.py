@@ -3,7 +3,7 @@ import pandas as pd
 from enum import Enum
 from hashlib import sha256
 from .name_parser import AuthorParser, Author
-from typing import Optional
+from typing import Optional, Callable
 
 class SourceHeading(Enum):
     '''Defines the column in the source system that contains the name for Elements object type mapping'''
@@ -26,6 +26,33 @@ class SourceHeading(Enum):
                 return 'activity'
             case SourceHeading.PUBS:
                 return 'publication'
+    
+
+class LinkType(Enum):
+    '''Defines the Elements user link types for each category'''
+    ACTIVITY = 23
+    TEACHING = 83
+    AUTHOR = 8
+    EDITOR = 9
+    TRANSLATOR = 82
+    CONTRIBUTOR = 92
+
+    @classmethod
+    def from_object(cls, heading: SourceHeading, type: str=None):
+        '''Selects a link type based on the Elements object category and an optional object type'''
+        match (heading.category, type):
+            case ('activity', None):
+                return cls.ACTIVITY
+
+
+LINK_HEADERS = ['category-1', 'id-1', 'category-2', 'id-2', 'link-type-id']
+
+def create_links(user_id: str, work_id: str, heading: SourceHeading, object_type: Optional[str]=None) -> dict[str, str]:
+    '''Returns dictionary linking object IDs to the supplied user ID, using the category and link type associated with the supplied instance of SourceHeading'''
+    category = heading.category
+    link_type_id = LinkType.from_object(heading, object_type).value
+    return dict(zip(LINK_HEADERS, [category, work_id, 'user', user_id, link_type_id]))
+
 
 def normalize(column_str: str) -> str:
     '''Normalizes column names to lower-case, underscore-separated'''
@@ -35,7 +62,7 @@ class ElementsObjectID:
     '''Class to create unique IDs for objects.'''
 
     def __init__(self, path_to_id_store: str=None):
-        '''Optionally, supply the path to CSV storing unique ID's and hashes. The ID's are assumed to be truncated prefixes of the hashes.'''
+        '''Optionally, supply the path to CSV storing hashes and unique ID's. The ID's are assumed to be truncated prefixes of the hashes.'''
         if path_to_id_store:
             self.used = dict(zip(pd.read_csv(path_to_id_store, header=None).values))
             self.path_to_id_store = path_to_id_store
@@ -46,11 +73,15 @@ class ElementsObjectID:
         '''Returns the first six characters of a hex digest for a SHA256 hash of the supplied list of values. Only non-null values will be used in creating the hash. If a list of ids was provided in creating the instance, ensures that the minted id is unique.'''
         input = ''.join([v for v in values if (not pd.isna(v)) and v]).encode()
         hash = sha256(input).hexdigest()
+        # If this hash is already in the store, return the ID
+        if hash in self.used:
+            return self.used[hash]
+        # Otherwise, mint a new ID
         _id = hash[:6]
-        # Check for collisions and increment the prefix until it no longer matches
-        while _id in self.used:
+        # Check for collisions on the prefix and increment until it no longer matches
+        while (_id in self.used.values()):
             _id = hex(int(_id, 16) + 1)[:6]
-        self.used[_id] = hash
+        self.used[hash] = _id
         return _id
 
     def persist_ids(self):
@@ -60,9 +91,9 @@ class ElementsObjectID:
 
 class ElementsMapping:
 
-    def __init__(self, path_to_mapping: str, path_to_choice_file: str=None):
+    def __init__(self, path_to_mapping: str, path_to_choice_file: str=None, concat_fields: dict[str: list[str]]=None):
         '''
-        Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields.
+        Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields. Supply a dictionary for the concat_fields argument if necessary; fields in each list will have their values appended to the fields named as the dictionary keys. The fields names as keys should appear in the Elements mapping, or else they will be ultimately ignored.
         '''
         self.mapping = pd.read_csv(path_to_mapping)
         # Use the second row as the column heading
@@ -77,6 +108,9 @@ class ElementsMapping:
         # Mapping to derive the data type for each underlying field 
         self.field_type_map = dict([(k.strip('"'), v) for k,v in self.mapping.iloc[2:, 0:2].values 
                            if not pd.isna(k)])
+        if concat_fields:
+            self.concat_fields = {from_field: to_field for to_field, v in concat_fields.items() 
+                                    for from_field in v}
     
     def map_row(self, row: dict[str, str], map_type: SourceHeading) -> tuple[dict[str, str], dict[str, str]]:
         '''Input is a dict with the keys corresponding to column names in the source system. Outputs an udpated objects with keys reflecting the column names for import into Elements, with person fields in a separate dict.'''
@@ -86,8 +120,17 @@ class ElementsMapping:
         mapped_row['type'] = self.object_type_map[source_type]
         this_mapping = self.column_map[source_type] # This is the column mapping that determines the applicable columns for this particular type of object
         for k, v in row.items():
+            # First, concatenate any fields as needed
+            if self.concat_fields and k in self.concat_fields:
+                to_field = self.concat_fields[k]
+                # Add to this field, which may or may not have content already
+                if not row[to_field] or pd.isna(row[to_field]):
+                    row[to_field] = f'{k}: {v}'
+                else:
+                    row[to_field] += f'\n\n{k}: {v}'
+            # Check for the presence of this field in the Elements mapping
             elements_column = this_mapping.get(k)
-            if not elements_column:
+            if not elements_column and k not in self.concat_fields:
                 continue
             if self.field_type_map[elements_column] in ['person', 'person-list']: # We don't add Person fields to the Metadata CSV
                 mapped_persons[elements_column] = v
@@ -108,6 +151,8 @@ class ElementsMetadataRow:
             del row['Index']
         data, persons = mapper.map_row(row, map_type)
         data['id'] = minter.mint_id(data)
+        # Convert mapped dict (data) to object properties
+        # This allows us to add special property handlers as needed for any Elements mapped fields
         for k, v in data.items():
             # Need to convert the format of Elements column names to valid Python names\
             key = k.replace('-', '_')
@@ -155,11 +200,11 @@ class ElementsMetadataRow:
     
     @property
     def institution(self):
-        return self.data.get('institution')[:200]
+        return self._institution[:200]
 
     @property
     def department(self):
-        return self.data.get('department')[:100]
+        return self._department[:100]
     
     @property
     def isbn_13(self):

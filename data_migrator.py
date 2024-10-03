@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterator
 import pandas as pd
 from pandas import DataFrame
 import click 
@@ -9,7 +9,9 @@ import logging
 from datetime import datetime
 from lyterati_utils.doi_parser import Parser
 from lyterati_utils.name_parser import AuthorParser
-import regex
+import re
+from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, ElementsMetadataRow, create_links
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -144,7 +146,7 @@ def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
     else:
         missing_ids = pd.read_excel(path_to_id_map)
     # Identify the column that contains GWIDs
-    gwid_re = regex.compile(r'G[0-9]{8}')
+    gwid_re = re.compile(r'G[0-9]{8}')
     for c in missing_ids.columns:
         if missing_ids[c].str.match(gwid_re).all():
             missing_ids = missing_ids.rename(columns={c: PROFILE_ID_FIELD})
@@ -159,18 +161,62 @@ def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
     if num_missing > 0:
         logger.warn(f'After merge, {num_missing} missing IDs remain.')
     return matched
+
+def process_for_elements(df: DataFrame, category: str, path_to_mapping: str, path_to_id_store: str) -> list[list[dict[str, str]]]:
+    '''df should be the single DataFrame containing the merged Lyterati reports for import. path_to_mapping should point to an Elements "decision" sheet. Returns three lists of dicts: metadata, persons, and linking data, for constructing the import files.'''
+    if category == 'service':
+        concat_fields = { 'additional_details': ['collaborators', 'heading_type'] }
+    else:
+        concat_fields = { 'additional_details': ['authors'] }
+    mapping = ElementsMapping(path_to_mapping, concat_fields)
+    path = Path(path_to_id_store)
+    if not path.exists():
+        path.touch()
+        minter = ElementsObjectID()
+        minter.path_to_id_store = path_to_id_store
+    else:
+        minter = ElementsObjectID(path_to_id_store)
+    parser = AuthorParser()
+    map_type = SourceHeading[category.upper()] # SERVICE or PUBS
+    metadata_rows = []
+    linking_rows = []
+    persons_rows = []
+    for row in df.itertuples(index=False):
+        elements_row = ElementsMetadataRow(row, map_type=map_type, mapping=mapping, minter=minter, parser=parser)
+        metadata_rows.append(dict(elements_row))
+        linking_rows.append(create_links(user_id=getattr(row, PROFILE_ID_FIELD),
+                                work_id=elements_row.id,
+                                heading=map_type))
+        persons_rows.extend(list(elements_row.extract_persons()))
+    minter.persist_ids()
+    return metadata_rows, linking_rows, persons_rows
     
-
-
-
 @click.group()
 def cli():
     pass
 
+@cli.command()
+@click.option('--mapping', required=True)
+@click.option('--data-source', required=True)
+@click.option('--category', type=click.Choice(['service', 'pubs'], case_sensitive=False, default='service'))
+@click.option('--id-store', default='./data/to-migrate/unique-ids.csv')
+@click.option('--output-dir', default='./data/to-migrate/sftp')
+def make_import_files(mapping, data_source, category, id_store, output_dir):
+    data = pd.read_csv(data_source)
+    output_dir = Path(output_dir)
+    for name, output in zip(['metadata', 'linking', 'persons'], process_for_elements(data, category, mapping, id_store)):
+        df = pd.DataFrame.from_records(output)
+        df.to_csv(output_dir / f'{name}.csv', index=False)
 
 
-def make_metadata(reports: DataFrame) -> DataFrame:
-    pass
+@cli.command()
+@click.option('--id-source', default='./data/to-migrate/missing-ids.csv')
+@click.option('--data-source', required=True)
+def add_missing_ids(id_source, data_source):
+    '''Adds IDs from the id-source to the data-source, matching on columns defined in the constant MERGE_FIELDS. Result is saved to the original file specified by data-source.'''
+    reports = pd.read_csv(data_source)
+    reports = update_ids(reports, id_source)
+    reports.to_csv(data_source, index=False)
 
 @cli.command()
 @click.option('--id-source', default='./data/lyterati-xml/expert-finder-feed')

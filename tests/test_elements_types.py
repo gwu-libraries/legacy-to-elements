@@ -1,5 +1,5 @@
 import pytest
-from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, ElementsMetadataRow, ElementsPersonList
+from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, ElementsMetadataRow, LinkType, create_links
 from lyterati_utils.name_parser import AuthorParser
 import pandas as pd
 
@@ -49,7 +49,8 @@ def seed():
 def user():
     return {'first_name': 'Heath', 
             'last_name': 'Krandall',
-            'middle_name': 'A'}
+            'middle_name': 'A',
+            'gw_id': '9999999'}
 
 @pytest.fixture()
 def minter(seed):
@@ -156,11 +157,28 @@ class TestElementsMapping:
                                         'name': 'organisation',
                                         'url': 'url'}}
 
+
+class TestLinkType:
+
+    def test_creating_link_type_from_category(self):
+        assert LinkType.from_object(SourceHeading.SERVICE) == LinkType.ACTIVITY
+
+class TestLinker:
+
+    def test_creating_link_from_user_to_work(self, user, metadata_row):
+        assert create_links(user['gw_id'], metadata_row[0].id, SourceHeading.SERVICE) == {'category-1': 'activity', 'id-1': '150520', 'category-2': 'user', 'id-2': '9999999', 'link-type-id': 23}
+
 class TestElementsObjectID:
 
     def test_id_minter(self, metadata_row):
         assert len(set(metadata_row[1].used.values())) == 2
 
+    def test_collisions(self, minter, row):
+        id1 = minter.mint_id(row.values())
+        id2 = minter.mint_id(row.values()) 
+        assert id1 == id2
+        row['college_name'] = 'Gelman Library'
+        assert minter.mint_id(row.values()) != id2        
 
 class TestElementsMetadataRow:
 
@@ -172,5 +190,5 @@ class TestElementsMetadataRow:
     
 class TestElementsPersonList:
 
-    def test_persons(self, person_list, user):
+    def test_persons(self, person_list):
         assert person_list.parse_names(person_list.persons['co-contributors']) == [{'first-name': 'H', 'surname': 'Ledger', 'full': 'H Ledger'}, {'first-name': 'H', 'surname': 'Bar', 'full': 'H Bar'}, {'first-name': 'CE', 'surname': 'Heath', 'full': 'CE Heath'}]
