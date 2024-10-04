@@ -165,10 +165,10 @@ def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
 def process_for_elements(df: DataFrame, category: str, path_to_mapping: str, path_to_id_store: str) -> list[list[dict[str, str]]]:
     '''df should be the single DataFrame containing the merged Lyterati reports for import. path_to_mapping should point to an Elements "decision" sheet. Returns three lists of dicts: metadata, persons, and linking data, for constructing the import files.'''
     if category == 'service':
-        concat_fields = { 'additional_details': ['collaborators', 'heading_type'] }
+        concat_fields = { 'additional_details': ['heading_type', 'collaborators'] }
     else:
         concat_fields = { 'additional_details': ['authors'] }
-    mapping = ElementsMapping(path_to_mapping, concat_fields)
+    mapper = ElementsMapping(path_to_mapping, concat_fields=concat_fields)
     path = Path(path_to_id_store)
     if not path.exists():
         path.touch()
@@ -182,12 +182,12 @@ def process_for_elements(df: DataFrame, category: str, path_to_mapping: str, pat
     linking_rows = []
     persons_rows = []
     for row in df.itertuples(index=False):
-        elements_row = ElementsMetadataRow(row, map_type=map_type, mapping=mapping, minter=minter, parser=parser)
+        elements_row = ElementsMetadataRow(row, map_type=map_type, mapper=mapper, minter=minter, parser=parser)
         metadata_rows.append(dict(elements_row))
         linking_rows.append(create_links(user_id=getattr(row, PROFILE_ID_FIELD),
                                 work_id=elements_row.id,
                                 heading=map_type))
-        persons_rows.extend(list(elements_row.extract_persons()))
+        persons_rows.extend(list(elements_row.extract_person_list()))
     minter.persist_ids()
     return metadata_rows, linking_rows, persons_rows
     
@@ -198,7 +198,7 @@ def cli():
 @cli.command()
 @click.option('--mapping', required=True)
 @click.option('--data-source', required=True)
-@click.option('--category', type=click.Choice(['service', 'pubs'], case_sensitive=False, default='service'))
+@click.option('--category', type=click.Choice(['service', 'pubs'], case_sensitive=False), default='service')
 @click.option('--id-store', default='./data/to-migrate/unique-ids.csv')
 @click.option('--output-dir', default='./data/to-migrate/sftp')
 def make_import_files(mapping, data_source, category, id_store, output_dir):
@@ -210,7 +210,7 @@ def make_import_files(mapping, data_source, category, id_store, output_dir):
 
 
 @cli.command()
-@click.option('--id-source', default='./data/to-migrate/missing-ids.csv')
+@click.option('--id-source', default='./data/to-migrate/missing_ids.csv')
 @click.option('--data-source', required=True)
 def add_missing_ids(id_source, data_source):
     '''Adds IDs from the id-source to the data-source, matching on columns defined in the constant MERGE_FIELDS. Result is saved to the original file specified by data-source.'''

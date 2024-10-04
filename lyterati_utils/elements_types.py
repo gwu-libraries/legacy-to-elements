@@ -4,6 +4,10 @@ from enum import Enum
 from hashlib import sha256
 from .name_parser import AuthorParser, Author
 from typing import Optional, Callable
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class SourceHeading(Enum):
     '''Defines the column in the source system that contains the name for Elements object type mapping'''
@@ -64,14 +68,14 @@ class ElementsObjectID:
     def __init__(self, path_to_id_store: str=None):
         '''Optionally, supply the path to CSV storing hashes and unique ID's. The ID's are assumed to be truncated prefixes of the hashes.'''
         if path_to_id_store:
-            self.used = dict(zip(pd.read_csv(path_to_id_store, header=None).values))
+            self.used = dict(pd.read_csv(path_to_id_store, header=None).values)
             self.path_to_id_store = path_to_id_store
         else:
             self.used = {}
 
     def mint_id(self, values: list[str]) -> str:
         '''Returns the first six characters of a hex digest for a SHA256 hash of the supplied list of values. Only non-null values will be used in creating the hash. If a list of ids was provided in creating the instance, ensures that the minted id is unique.'''
-        input = ''.join([v for v in values if (not pd.isna(v)) and v]).encode()
+        input = ''.join([str(v) for v in values if (not pd.isna(v)) and v]).encode()
         hash = sha256(input).hexdigest()
         # If this hash is already in the store, return the ID
         if hash in self.used:
@@ -86,7 +90,7 @@ class ElementsObjectID:
 
     def persist_ids(self):
         '''Assumes a path was provided when creating the instance.'''
-        pd.Series(self.used).to_csv(self.path_to_id_store, headers=None)
+        pd.Series(self.used).to_csv(self.path_to_id_store, header=False)
 
 
 class ElementsMapping:
@@ -120,17 +124,20 @@ class ElementsMapping:
         mapped_row['type'] = self.object_type_map[source_type]
         this_mapping = self.column_map[source_type] # This is the column mapping that determines the applicable columns for this particular type of object
         for k, v in row.items():
+            # Skip rows without any data
+            if pd.isna(v) or not v:
+                continue
             # First, concatenate any fields as needed
-            if self.concat_fields and k in self.concat_fields:
-                to_field = self.concat_fields[k]
+            if hasattr(self, 'concat_fields') and k in self.concat_fields:
+                to_field = this_mapping[self.concat_fields[k]]
                 # Add to this field, which may or may not have content already
-                if not row[to_field] or pd.isna(row[to_field]):
-                    row[to_field] = f'{k}: {v}'
+                if not mapped_row.get(to_field):
+                    mapped_row[to_field] = f'{k}: {v}'
                 else:
-                    row[to_field] += f'\n\n{k}: {v}'
+                    mapped_row[to_field] += f'\n\n{k}: {v}'
             # Check for the presence of this field in the Elements mapping
             elements_column = this_mapping.get(k)
-            if not elements_column and k not in self.concat_fields:
+            if not elements_column:
                 continue
             if self.field_type_map[elements_column] in ['person', 'person-list']: # We don't add Person fields to the Metadata CSV
                 mapped_persons[elements_column] = v
@@ -145,12 +152,13 @@ class ElementsMetadataRow:
 
     def __init__(self, row: dict[str, str], map_type: SourceHeading, mapper: ElementsMapping, minter: ElementsObjectID, parser: AuthorParser):
         '''Used to create a row for the metadata import out of a row of Lyterati data. If the namedtuple comes from a pandas DataFrame, the Index column will be discarded. The instance of ElementsMapping provides the column mapping from Lyterati. The row parameter accepts a dict or namedtuple. The instance of ElementsObjectID is used to create unique ID's for each object.'''
+        self.mapper = mapper
         if not isinstance(row, dict):
             row = row._asdict()
         if 'Index' in row:
             del row['Index']
-        data, persons = mapper.map_row(row, map_type)
-        data['id'] = minter.mint_id(data)
+        data, persons = self.mapper.map_row(row, map_type)
+        data['id'] = minter.mint_id(data.values())
         # Convert mapped dict (data) to object properties
         # This allows us to add special property handlers as needed for any Elements mapped fields
         for k, v in data.items():
@@ -177,6 +185,9 @@ class ElementsMetadataRow:
             # Remove initial underscore for internal values
             if key == '_persons':
                 continue
+            # Flag any fields mapped to an Elements 'choice' type that don't have a property getter
+            if self.mapper.field_type_map.get(key.replace('_', '-')) == 'choice':
+                logger.warn(f'Field {key} is a choice field but no choice mapping is defined.')
             if key.startswith('_') and key[1:] in self.properties:
                 key = key[1:]
             yield key.replace('_', '-'), getattr(self, key)
@@ -195,7 +206,11 @@ class ElementsMetadataRow:
     def start_date(self):
         year = getattr(self, '_start_date')
         if year:
-            year = int(float(year))
+            try:
+                year = int(float(year))
+            except ValueError:
+                logger.error(f'Unable to covert state_date {year}. Skipping it.') 
+                return 
             return date(year, 1, 1).strftime('%Y-%m-%d')
     
     @property
@@ -221,6 +236,8 @@ class ElementsPersonList:
     
     def __iter__(self):
         for _type, name_str in self.persons.items():
+            if not isinstance(name_str, str):
+                continue
             for person in self.parse_names(name_str):
                 person.update({'field-name': _type})
                 yield person
@@ -249,7 +266,7 @@ class ElementsPersonList:
         first_name = ' '.join(person.first_name)
         if first_name and person.initials:
            first_name += ' ' + ''.join(person.initials)
-        else:
+        elif person.initials:
             first_name = ''.join(person.initials)
         full_name = f'{first_name} {surname}' if first_name else surname
         return {'first-name': first_name, 'surname': surname, 'full': full_name}

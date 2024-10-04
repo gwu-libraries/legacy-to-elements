@@ -166,7 +166,7 @@ class TestLinkType:
 class TestLinker:
 
     def test_creating_link_from_user_to_work(self, user, metadata_row):
-        assert create_links(user['gw_id'], metadata_row[0].id, SourceHeading.SERVICE) == {'category-1': 'activity', 'id-1': '150520', 'category-2': 'user', 'id-2': '9999999', 'link-type-id': 23}
+        assert create_links(user['gw_id'], metadata_row[0].id, SourceHeading.SERVICE) == {'category-1': 'activity', 'id-1': '5c8c12', 'category-2': 'user', 'id-2': '9999999', 'link-type-id': 23}
 
 class TestElementsObjectID:
 
@@ -183,10 +183,10 @@ class TestElementsObjectID:
 class TestElementsMetadataRow:
 
     def test_row(self, metadata_row):
-        assert dict(metadata_row[0]) == {'category': 'activity', 'type': 'non-research-presentation', 'start-date': '2001-01-01', 'url': '', 'organisation': 'National Human Genome Research Institute', 'id': '150520'}
+        assert dict(metadata_row[0]) == {'category': 'activity', 'type': 'non-research-presentation', 'start-date': '2001-01-01', 'organisation': 'National Human Genome Research Institute', 'id': '5c8c12'}
     
     def test_persons(self, metadata_row):
-        assert list(metadata_row[0].extract_person_list()) == [{'category': 'activity', 'first-name': 'H', 'surname': 'Ledger', 'full': 'H Ledger', 'field-name': 'co-contributors', 'id': '150520'}, {'category': 'activity', 'first-name': 'H', 'surname': 'Bar', 'full': 'H Bar', 'field-name': 'co-contributors', 'id': '150520'}, {'category': 'activity', 'first-name': 'CE', 'surname': 'Heath', 'full': 'CE Heath', 'field-name': 'co-contributors', 'id': '150520'}]
+        assert list(metadata_row[0].extract_person_list()) == [{'category': 'activity', 'first-name': 'H', 'surname': 'Ledger', 'full': 'H Ledger', 'field-name': 'co-contributors', 'id': '5c8c12'}, {'category': 'activity', 'first-name': 'H', 'surname': 'Bar', 'full': 'H Bar', 'field-name': 'co-contributors', 'id': '5c8c12'}, {'category': 'activity', 'first-name': 'CE', 'surname': 'Heath', 'full': 'CE Heath', 'field-name': 'co-contributors', 'id': '5c8c12'}]
     
 class TestElementsPersonList:
 
