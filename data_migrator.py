@@ -162,13 +162,13 @@ def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
         logger.warn(f'After merge, {num_missing} missing IDs remain.')
     return matched
 
-def process_for_elements(df: DataFrame, category: str, path_to_mapping: str, path_to_id_store: str) -> list[list[dict[str, str]]]:
+def process_for_elements(df: DataFrame, category: str, path_to_mapping: str, path_to_id_store: str, path_to_choice_lists: str=None) -> list[list[dict[str, str]]]:
     '''df should be the single DataFrame containing the merged Lyterati reports for import. path_to_mapping should point to an Elements "decision" sheet. Returns three lists of dicts: metadata, persons, and linking data, for constructing the import files.'''
     if category == 'service':
         concat_fields = { 'additional_details': ['heading_type', 'collaborators'] }
     else:
         concat_fields = { 'additional_details': ['authors'] }
-    mapper = ElementsMapping(path_to_mapping, concat_fields=concat_fields)
+    mapper = ElementsMapping(path_to_mapping, concat_fields=concat_fields, path_to_choice_lists=path_to_choice_lists)
     path = Path(path_to_id_store)
     if not path.exists():
         path.touch()
@@ -198,13 +198,14 @@ def cli():
 @cli.command()
 @click.option('--mapping', required=True)
 @click.option('--data-source', required=True)
+@click.option('--choice-list', default=None)
 @click.option('--category', type=click.Choice(['service', 'pubs'], case_sensitive=False), default='service')
 @click.option('--id-store', default='./data/to-migrate/unique-ids.csv')
 @click.option('--output-dir', default='./data/to-migrate/sftp')
-def make_import_files(mapping, data_source, category, id_store, output_dir):
+def make_import_files(mapping, data_source, choice_list, category, id_store, output_dir):
     data = pd.read_csv(data_source)
     output_dir = Path(output_dir)
-    for name, output in zip(['metadata', 'linking', 'persons'], process_for_elements(data, category, mapping, id_store)):
+    for name, output in zip(['metadata', 'linking', 'persons'], process_for_elements(data, category, mapping, id_store, choice_list)):
         df = pd.DataFrame.from_records(output)
         df.to_csv(output_dir / f'{name}.csv', index=False)
 

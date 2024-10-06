@@ -95,10 +95,11 @@ class ElementsObjectID:
 
 class ElementsMapping:
 
-    def __init__(self, path_to_mapping: str, path_to_choice_file: str=None, concat_fields: dict[str: list[str]]=None):
+    def __init__(self, path_to_mapping: str, path_to_choice_lists: str=None, concat_fields: dict[str: list[str]]=None):
         '''
         Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields. Supply a dictionary for the concat_fields argument if necessary; fields in each list will have their values appended to the fields named as the dictionary keys. The fields names as keys should appear in the Elements mapping, or else they will be ultimately ignored.
         '''
+        self.choice_map = self.build_choice_map(path_to_choice_lists) if path_to_choice_lists else None
         self.mapping = pd.read_csv(path_to_mapping)
         # Use the second row as the column heading
         self.mapping.columns = self.mapping.iloc[0].values
@@ -112,9 +113,28 @@ class ElementsMapping:
         # Mapping to derive the data type for each underlying field 
         self.field_type_map = dict([(k.strip('"'), v) for k,v in self.mapping.iloc[2:, 0:2].values 
                            if not pd.isna(k)])
-        if concat_fields:
-            self.concat_fields = {from_field: to_field for to_field, v in concat_fields.items() 
-                                    for from_field in v}
+        self.concat_fields = {from_field: to_field for to_field, v in concat_fields.items() 
+                                    for from_field in v} if concat_fields else None
+            
+    def build_choice_map(self, path_to_choice_lists: str) -> dict[str, dict[str, str]]:
+        '''Expects an Excel file, where each sheet corresponds to an Elements choice field.
+        If the sheet has only one column, the column header is assumed to correspond to an Elements choice field, and the values to be tbe same in the source system and in Elements. If two columns, the second column is assumed to contain values in the source field to be mapped to the choice values in the Elements field. '''
+        sheets = pd.read_excel(path_to_choice_lists, engine='openpyxl', sheet_name=None)
+        choice_map = {}
+        for name, sheet in sheets.items():
+            sheet_dict = sheet.to_dict()
+            # Case 1: one column, list to constrain Elements field name
+            # Assume header == the sheet name == the Elements field name
+            # Maps each possible value to itself
+            if len(sheet_dict) == 1:
+                choice_map[name] = { v: v for v in sheet_dict[name].values() }
+            # Case 2: two columns, assume the first is the Elements field, the second the field in the source system.
+            # Assume each value in the source column is present only once (though values in the Elements column map repeat)
+            # Reverse the column order, created a mapping for each column value in 2 to 1
+            else:
+                choice_map[name] = dict(zip(*reversed([col.values() for col in sheet_dict.values()])))
+        return choice_map
+            
     
     def map_row(self, row: dict[str, str], map_type: SourceHeading) -> tuple[dict[str, str], dict[str, str]]:
         '''Input is a dict with the keys corresponding to column names in the source system. Outputs an udpated objects with keys reflecting the column names for import into Elements, with person fields in a separate dict.'''
@@ -128,21 +148,29 @@ class ElementsMapping:
             if pd.isna(v) or not v:
                 continue
             # First, concatenate any fields as needed
-            if hasattr(self, 'concat_fields') and k in self.concat_fields:
+            if self.concat_fields and k in self.concat_fields:
                 to_field = this_mapping[self.concat_fields[k]]
+                # Convert column name back to title case with spaces
+                key = k.replace("_", " ").title()
                 # Add to this field, which may or may not have content already
                 if not mapped_row.get(to_field):
-                    mapped_row[to_field] = f'{k}: {v}'
+                    mapped_row[to_field] = f'{key}: {v}'
                 else:
-                    mapped_row[to_field] += f'\n\n{k}: {v}'
+                    mapped_row[to_field] += f'\n\n{key}: {v}'
             # Check for the presence of this field in the Elements mapping
             elements_column = this_mapping.get(k)
             if not elements_column:
                 continue
             if self.field_type_map[elements_column] in ['person', 'person-list']: # We don't add Person fields to the Metadata CSV
                 mapped_persons[elements_column] = v
-            else:
-                mapped_row[this_mapping[k]] = v  # Keep only those columns values that we want mapped
+            # Choice field: make sure the values conform
+            elif self.field_type_map[elements_column] == 'choice':
+                choice = self.choice_map[elements_column].get(v)
+                if not v:
+                    logger.warn(f'Found value {v} for choice field {elements_column}, but {v} is not a permitted value for that field.')
+                mapped_row[elements_column] = choice
+            else:                         
+                mapped_row[elements_column] = v  # Keep only those columns values that we want mapped
         return mapped_row, mapped_persons
 
 class ElementsMetadataRow:
@@ -152,12 +180,11 @@ class ElementsMetadataRow:
 
     def __init__(self, row: dict[str, str], map_type: SourceHeading, mapper: ElementsMapping, minter: ElementsObjectID, parser: AuthorParser):
         '''Used to create a row for the metadata import out of a row of Lyterati data. If the namedtuple comes from a pandas DataFrame, the Index column will be discarded. The instance of ElementsMapping provides the column mapping from Lyterati. The row parameter accepts a dict or namedtuple. The instance of ElementsObjectID is used to create unique ID's for each object.'''
-        self.mapper = mapper
         if not isinstance(row, dict):
             row = row._asdict()
         if 'Index' in row:
             del row['Index']
-        data, persons = self.mapper.map_row(row, map_type)
+        data, persons = mapper.map_row(row, map_type)
         data['id'] = minter.mint_id(data.values())
         # Convert mapped dict (data) to object properties
         # This allows us to add special property handlers as needed for any Elements mapped fields
@@ -185,9 +212,6 @@ class ElementsMetadataRow:
             # Remove initial underscore for internal values
             if key == '_persons':
                 continue
-            # Flag any fields mapped to an Elements 'choice' type that don't have a property getter
-            if self.mapper.field_type_map.get(key.replace('_', '-')) == 'choice':
-                logger.warn(f'Field {key} is a choice field but no choice mapping is defined.')
             if key.startswith('_') and key[1:] in self.properties:
                 key = key[1:]
             yield key.replace('_', '-'), getattr(self, key)
