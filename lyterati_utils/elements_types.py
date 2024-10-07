@@ -185,7 +185,8 @@ class ElementsMetadataRow:
         if 'Index' in row:
             del row['Index']
         data, persons = mapper.map_row(row, map_type)
-        data['id'] = minter.mint_id(data.values())
+        # Use the original row values to mint the ID's, otherwise, we'll have duplicates, since the reduced Elements fieldset is not fully descriptive
+        data['id'] = minter.mint_id(row.values())
         # Convert mapped dict (data) to object properties
         # This allows us to add special property handlers as needed for any Elements mapped fields
         for k, v in data.items():
