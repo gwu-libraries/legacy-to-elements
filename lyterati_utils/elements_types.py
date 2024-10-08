@@ -5,14 +5,27 @@ from hashlib import sha256
 from .name_parser import AuthorParser, Author
 from typing import Optional, Callable
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+class TermDates(Enum):
+    '''Month and day for date of term'''
+    FALL_START = (9, 1)
+    FALL_END = (12, 31)
+    SPRING_START = (1, 1)
+    SPRING_END = (5, 31)
+    SUMMER_START = (6, 1)
+    SUMMER_END = (8, 31)
+
+ID_LENGTH = 8
 
 class SourceHeading(Enum):
     '''Defines the column in the source system that contains the name for Elements object type mapping'''
     SERVICE = 'service_heading'
     PUBS = 'research_heading'
+    TEACHING = 'report_code' # Only one type of object in this file
 
     @property
     def include_user(self):
@@ -30,6 +43,8 @@ class SourceHeading(Enum):
                 return 'activity'
             case SourceHeading.PUBS:
                 return 'publication'
+            case SourceHeading.TEACHING:
+                return 'teaching-activity'
     
 
 class LinkType(Enum):
@@ -47,6 +62,8 @@ class LinkType(Enum):
         match (heading.category, type):
             case ('activity', None):
                 return cls.ACTIVITY
+            case ('teaching-activity', None):
+                return cls.TEACHING
 
 
 LINK_HEADERS = ['category-1', 'id-1', 'category-2', 'id-2', 'link-type-id']
@@ -81,10 +98,10 @@ class ElementsObjectID:
         if hash in self.used:
             return self.used[hash]
         # Otherwise, mint a new ID
-        _id = hash[:6]
+        _id = hash[:ID_LENGTH]
         # Check for collisions on the prefix and increment until it no longer matches
         while (_id in self.used.values()):
-            _id = hex(int(_id, 16) + 1)[:6]
+            _id = hex(int(_id, 16) + 1)[:ID_LENGTH]
         self.used[hash] = _id
         return _id
 
@@ -154,9 +171,9 @@ class ElementsMapping:
                 key = k.replace("_", " ").title()
                 # Add to this field, which may or may not have content already
                 if not mapped_row.get(to_field):
-                    mapped_row[to_field] = f'{key}: {v}'
+                    mapped_row[to_field] = f'(Legacy) {key}: {v}'
                 else:
-                    mapped_row[to_field] += f'\n\n{key}: {v}'
+                    mapped_row[to_field] += f'\n\n(Legacy) {key}: {v}'
             # Check for the presence of this field in the Elements mapping
             elements_column = this_mapping.get(k)
             if not elements_column:
@@ -169,14 +186,21 @@ class ElementsMapping:
                 if not v:
                     logger.warn(f'Found value {v} for choice field {elements_column}, but {v} is not a permitted value for that field.')
                 mapped_row[elements_column] = choice
-            else:                         
+            else:
+                # Where concatenating fields, make sure we preserve any existing values when adding new values                         
+                existing_value = mapped_row.get(elements_column)
+                if existing_value:
+                    v = existing_value + '\n\n' + v
                 mapped_row[elements_column] = v  # Keep only those columns values that we want mapped
         return mapped_row, mapped_persons
 
 class ElementsMetadataRow:
     '''Represents a single row for import data for Elements'''
     # Fields for which we want @property access, because we want to apply some formatting or type constraints
-    properties = ['doi', 'start_date', 'department', 'institution', 'isbn_13']
+    properties = ['doi', 'start_date', 'end_date', 'department', 'institution', 'isbn_13']
+
+    is_year = re.compile(r'((?:19|20)\d{2})(\.0)?')
+    is_term = re.compile(r'(Spring|Fall|Summer) ((?:19|20)\d{2})')
 
     def __init__(self, row: dict[str, str], map_type: SourceHeading, mapper: ElementsMapping, minter: ElementsObjectID, parser: AuthorParser):
         '''Used to create a row for the metadata import out of a row of Lyterati data. If the namedtuple comes from a pandas DataFrame, the Index column will be discarded. The instance of ElementsMapping provides the column mapping from Lyterati. The row parameter accepts a dict or namedtuple. The instance of ElementsObjectID is used to create unique ID's for each object.'''
@@ -222,6 +246,18 @@ class ElementsMetadataRow:
             person.update({'category': self.category,
                            'id': self.id})
             yield person
+    
+    @staticmethod
+    def convert_date(date_str: str, start_date: bool=True) -> str:
+        if m := ElementsMetadataRow.is_year.match(str(date_str)):
+            return date(int(m.group(1)), 1, 1).strftime('%Y-%m-%d')
+        elif m := ElementsMetadataRow.is_term.match(date_str):
+            year = int(m.group(2))
+            term_suffix = '_START' if start_date else '_END'
+            return date(year, *TermDates[m.group(1).upper() + term_suffix].value).strftime('%Y-%m-%d')
+        else:
+            logger.error(f'Unable to covert date string {date_str}. Skipping it.') 
+            return
 
     @property
     def doi(self):
@@ -229,14 +265,11 @@ class ElementsMetadataRow:
 
     @property
     def start_date(self):
-        year = getattr(self, '_start_date')
-        if year:
-            try:
-                year = int(float(year))
-            except ValueError:
-                logger.error(f'Unable to covert state_date {year}. Skipping it.') 
-                return 
-            return date(year, 1, 1).strftime('%Y-%m-%d')
+        return ElementsMetadataRow.convert_date(getattr(self, '_start_date'))
+    
+    @property
+    def end_date(self):
+        return ElementsMetadataRow.convert_date(getattr(self, '_end_date'), False)
     
     @property
     def institution(self):

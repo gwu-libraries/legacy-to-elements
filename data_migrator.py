@@ -166,6 +166,8 @@ def process_for_elements(df: DataFrame, category: str, path_to_mapping: str, pat
     '''df should be the single DataFrame containing the merged Lyterati reports for import. path_to_mapping should point to an Elements "decision" sheet. Returns three lists of dicts: metadata, persons, and linking data, for constructing the import files.'''
     if category == 'service':
         concat_fields = { 'additional_details': ['heading_type', 'collaborators'] }
+    elif category == 'teaching':
+        concat_fields = { 'additional_details': ['placement_type', 'role', 'degree_type'] }
     else:
         concat_fields = { 'additional_details': ['authors'] }
     mapper = ElementsMapping(path_to_mapping, concat_fields=concat_fields, path_to_choice_lists=path_to_choice_lists)
@@ -177,7 +179,7 @@ def process_for_elements(df: DataFrame, category: str, path_to_mapping: str, pat
     else:
         minter = ElementsObjectID(path_to_id_store)
     parser = AuthorParser()
-    map_type = SourceHeading[category.upper()] # SERVICE or PUBS
+    map_type = SourceHeading[category.upper()] # SERVICE or PUBS or TEACHING
     metadata_rows = []
     linking_rows = []
     persons_rows = []
@@ -199,7 +201,7 @@ def cli():
 @click.option('--mapping', required=True)
 @click.option('--data-source', required=True)
 @click.option('--choice-list', default=None)
-@click.option('--category', type=click.Choice(['service', 'pubs'], case_sensitive=False), default='service')
+@click.option('--category', type=click.Choice(['service', 'pubs', 'teaching'], case_sensitive=False), default='service')
 @click.option('--id-store', default='./data/to-migrate/unique-ids.csv')
 @click.option('--output-dir', default='./data/to-migrate/sftp')
 def make_import_files(mapping, data_source, choice_list, category, id_store, output_dir):
@@ -207,7 +209,7 @@ def make_import_files(mapping, data_source, choice_list, category, id_store, out
     output_dir = Path(output_dir)
     for name, output in zip(['metadata', 'linking', 'persons'], process_for_elements(data, category, mapping, id_store, choice_list)):
         df = pd.DataFrame.from_records(output)
-        df.to_csv(output_dir / f'{name}.csv', index=False)
+        df.to_csv(output_dir / f'{category}-{name}.csv', index=False)
 
 
 @cli.command()
