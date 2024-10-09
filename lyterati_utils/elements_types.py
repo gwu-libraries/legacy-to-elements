@@ -1,11 +1,14 @@
+from __future__ import annotations
 from datetime import date
 import pandas as pd
 from enum import Enum
 from hashlib import sha256
 from .name_parser import AuthorParser, Author
-from typing import Optional, Callable
+from typing import Optional, NamedTuple
+from collections import namedtuple
 import logging
 import re
+from functools import partial
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +27,7 @@ ID_LENGTH = 8
 class SourceHeading(Enum):
     '''Defines the column in the source system that contains the name for Elements object type mapping'''
     SERVICE = 'service_heading'
-    PUBS = 'research_heading'
+    RESEARCH = 'research_heading'
     TEACHING = 'report_code' # Only one type of object in this file
 
     @property
@@ -33,15 +36,17 @@ class SourceHeading(Enum):
         match self:
             case SourceHeading.SERVICE:
                 return False
-            case SourceHeading.PUBS:
+            case SourceHeading.RESEARCH:
                 return True
+            case SourceHeading.TEACHING:
+                return False
     
     @property
     def category(self):
         match self:
             case SourceHeading.SERVICE:
                 return 'activity'
-            case SourceHeading.PUBS:
+            case SourceHeading.RESEARCH:
                 return 'publication'
             case SourceHeading.TEACHING:
                 return 'teaching-activity'
@@ -112,10 +117,17 @@ class ElementsObjectID:
 
 class ElementsMapping:
 
-    def __init__(self, path_to_mapping: str, path_to_choice_lists: str=None, concat_fields: dict[str: list[str]]=None):
+    def __init__(self, path_to_mapping: str, 
+                minter: ElementsObjectID, 
+                parser: AuthorParser, 
+                path_to_choice_lists: str=None, 
+                concat_fields: dict[str: list[str]]=None,
+                user_author_mapping: list[str]=None):
         '''
         Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields. Supply a dictionary for the concat_fields argument if necessary; fields in each list will have their values appended to the fields named as the dictionary keys. The fields names as keys should appear in the Elements mapping, or else they will be ultimately ignored.
         '''
+        self.minter = minter
+        self.parser = parser
         self.choice_map = self.build_choice_map(path_to_choice_lists) if path_to_choice_lists else None
         self.mapping = pd.read_csv(path_to_mapping)
         # Use the second row as the column heading
@@ -123,15 +135,19 @@ class ElementsMapping:
         # Expects that the mapping starts in the 4th column, with each pair of columns representing a mapping from Elements fields to fields in the source system
         # Maps each Elements object type to the type in the source system
         self.object_type_map = {b: a for a,b in zip(self.mapping.columns[3::2], self.mapping.columns[4::2]) if not pd.isna(b)}
-        # For each record type in the source system, maps the associated fields to the underling fields in Elements
-        self.column_map = {}
-        for key, value in self.object_type_map.items():
-            self.column_map[key] = { normalize(l_key): e_key.strip('"') for e_key, l_key in self.mapping[[self.mapping.columns[0], key]].values[2:] if not pd.isna(l_key) }
         # Mapping to derive the data type for each underlying field 
-        self.field_type_map = dict([(k.strip('"'), v) for k,v in self.mapping.iloc[2:, 0:2].values 
-                           if not pd.isna(k)])
-        self.concat_fields = {from_field: to_field for to_field, v in concat_fields.items() 
-                                    for from_field in v} if concat_fields else None
+        self.field_type_map = dict([ (k.strip('"'), v) for k,v in self.mapping.iloc[2:, 0:2].values 
+                           if not pd.isna(k) and k ])
+        # For each record type in the source system, maps the associated fields to the underlying fields in Elements
+        self.column_map = {}
+        for key, _ in self.object_type_map.items():
+            self.column_map[key] = { normalize(source_key): el_key.strip('"') 
+                                    for el_key, source_key in self.mapping[[self.mapping.columns[0], key]].values[2:] 
+                                    if not pd.isna(source_key) and source_key }
+        # Fields to concatenate in the source system
+        self.concat_fields = { from_field: to_field for to_field, v in concat_fields.items() 
+                                    for from_field in v } if concat_fields else None
+        self.user_author_mapping = user_author_mapping
             
     def build_choice_map(self, path_to_choice_lists: str) -> dict[str, dict[str, str]]:
         '''Expects an Excel file, where each sheet corresponds to an Elements choice field.
@@ -151,98 +167,110 @@ class ElementsMapping:
             else:
                 choice_map[name] = dict(zip(*reversed([col.values() for col in sheet_dict.values()])))
         return choice_map
-            
     
-    def map_row(self, row: dict[str, str], map_type: SourceHeading) -> tuple[dict[str, str], dict[str, str]]:
-        '''Input is a dict with the keys corresponding to column names in the source system. Outputs an udpated objects with keys reflecting the column names for import into Elements, with person fields in a separate dict.'''
-        mapped_row = {}
-        mapped_persons = {}
-        source_type = row[map_type.value] # This is the input that determines the Element object type
-        mapped_row['type'] = self.object_type_map[source_type]
-        this_mapping = self.column_map[source_type] # This is the column mapping that determines the applicable columns for this particular type of object
-        for k, v in row.items():
-            # Skip rows without any data
-            if pd.isna(v) or not v:
-                continue
-            # First, concatenate any fields as needed
-            if self.concat_fields and k in self.concat_fields:
-                to_field = this_mapping[self.concat_fields[k]]
-                # Convert column name back to title case with spaces
-                key = k.replace("_", " ").title()
-                # Add to this field, which may or may not have content already
-                if not mapped_row.get(to_field):
-                    mapped_row[to_field] = f'(Legacy) {key}: {v}'
-                else:
-                    mapped_row[to_field] += f'\n\n(Legacy) {key}: {v}'
-            # Check for the presence of this field in the Elements mapping
-            elements_column = this_mapping.get(k)
-            if not elements_column:
-                continue
-            if self.field_type_map[elements_column] in ['person', 'person-list']: # We don't add Person fields to the Metadata CSV
-                mapped_persons[elements_column] = v
-            # Choice field: make sure the values conform
-            elif self.field_type_map[elements_column] == 'choice':
-                choice = self.choice_map[elements_column].get(v)
-                if not v:
-                    logger.warn(f'Found value {v} for choice field {elements_column}, but {v} is not a permitted value for that field.')
-                mapped_row[elements_column] = choice
-            else:
-                # Where concatenating fields, make sure we preserve any existing values when adding new values                         
-                existing_value = mapped_row.get(elements_column)
-                if existing_value:
-                    v = existing_value + '\n\n' + v
-                mapped_row[elements_column] = v  # Keep only those columns values that we want mapped
-        return mapped_row, mapped_persons
+    @staticmethod
+    def choice_validator(value: str, choices: dict[str, str]):
+        '''Used to validate choice fields based on the supplied dictionary.'''
+        try:
+            return choices[value]
+        except KeyError:
+            logger.warn(f'Value {value} not in choice list {list(choices.keys())}. Skipping this value because it won\'t map to the underlying choice field.')
+
+    
+    def make_mapped_row(self, row: dict[str, str] | NamedTuple, map_type: SourceHeading) -> ElementsMetadataRow:
+        '''Input is a dict with the keys (or namedtuple with attributes) corresponding to column names in the source system, and values corresponding to a row of data. Outputs an instance of ElementsMetadataRow for mapping that data to Elements fields.'''
+         # source_type is the input that determines the Element object type
+        if isinstance(row, namedtuple):
+            source_type = getattr(row, map_type.value)
+            # Need to remove the pandas Index attribute, as this will cause problems for minting the unique IDs
+            row = { k: v for k,v in row._asdict().items() if k != 'Index' }
+        else:
+            source_type = row[map_type.value]
+        mapped_row = ElementsMetadataRow(row)
+        mapped_row.parser = self.parser
+        # Elements object category
+        mapped_row.category = source_type.category
+        # Elements object type
+        mapped_row.type = self.object_type_map[source_type]
+        mapped_row.id = self.minter.mint_id(row.values())
+        mapped_row.concat_fields = self.concat_fields
+        # This is the column mapping that determines the applicable Elements columns for this particular type of object
+        mapped_row.fields_from_source = self.column_map[source_type] 
+        # This provides the name of the Elements fields for each column in the source, inverting the previous dict
+        # Assumes a 1:1 match between source system and Elements fields per type of object
+        mapped_row.elements_fields = { v: k for k, v in mapped_row.fields_from_source.items() }
+        # Person fields are handled separately
+        mapped_row.person_fields = [ k for k in mapped_row.elements_fields if self.field_type_map[k] in ['person', 'person-list'] ]
+        # Whether to include the user in the person data
+        if self.user_author_mapping:
+            mapped_row.user_author_mapping = self.user_author_mapping
+        # Add validator for choice fields
+        for k in mapped_row.elements_fields:
+            if k in self.choice_map:
+                setattr(mapped_row, f'{k}_validator', partial(ElementsMapping.choice_validator, choices=self.choice_map[k]))
+        return mapped_row
 
 class ElementsMetadataRow:
     '''Represents a single row for import data for Elements'''
     # Fields for which we want @property access, because we want to apply some formatting or type constraints
-    properties = ['doi', 'start_date', 'end_date', 'department', 'institution', 'isbn_13']
+    # Note that these field names use hyphens, not underscores, to match the Elements fields
+    properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13']
 
     is_year = re.compile(r'((?:19|20)\d{2})(\.0)?')
     is_term = re.compile(r'(Spring|Fall|Summer) ((?:19|20)\d{2})')
 
-    def __init__(self, row: dict[str, str], map_type: SourceHeading, mapper: ElementsMapping, minter: ElementsObjectID, parser: AuthorParser):
+    def __init__(self, row: dict[str, str]):
         '''Used to create a row for the metadata import out of a row of Lyterati data. If the namedtuple comes from a pandas DataFrame, the Index column will be discarded. The instance of ElementsMapping provides the column mapping from Lyterati. The row parameter accepts a dict or namedtuple. The instance of ElementsObjectID is used to create unique ID's for each object.'''
-        if not isinstance(row, dict):
-            row = row._asdict()
-        if 'Index' in row:
-            del row['Index']
-        data, persons = mapper.map_row(row, map_type)
-        # Use the original row values to mint the ID's, otherwise, we'll have duplicates, since the reduced Elements fieldset is not fully descriptive
-        data['id'] = minter.mint_id(row.values())
-        # Convert mapped dict (data) to object properties
-        # This allows us to add special property handlers as needed for any Elements mapped fields
-        for k, v in data.items():
-            # Need to convert the format of Elements column names to valid Python names\
-            key = k.replace('-', '_')
-            # Replace nulls with null string
-            value = '' if pd.isna(v) or not v else v
-            # If it's in this list, we're using a custom getter
-            if key in self.properties: 
-                setattr(self, f'_{key}', value)
-            else:
-                setattr(self, key, value)
-        if map_type.include_user:
-            user = {'first_name': row['first_name'],
-                    'last_name': row['last_name'],
-                    'middle_name': row['middle_name']}
-            self._persons = ElementsPersonList(persons, parser, user)
-        else:
-            self._persons = ElementsPersonList(persons, parser)
-        self.category = map_type.category
-    
-    def __iter__(self):
-        for key in vars(self):
-            # Remove initial underscore for internal values
-            if key == '_persons':
-                continue
-            if key.startswith('_') and key[1:] in self.properties:
-                key = key[1:]
-            yield key.replace('_', '-'), getattr(self, key)
+        self.data = row
+        self._persons = {}
 
-    def extract_person_list(self):
-        for person in self._persons:
+    def _concatenate_fields(self):
+        '''Updates data to concatenate fields before returning mapped fields.'''
+        if self.concat_fields:
+            for k, v in self.concat_fields.items():
+                concat_value = self.data.get(k)
+                # Only concat if something to add
+                if concat_value:
+                    self.data[v] += f'\n\n(Legacy) {k}: {concat_value}'
+
+    def __iter__(self):
+        # Fields every row will have
+        yield 'id', self.id
+        yield 'category', self.category
+        yield 'type', self.type
+        # Make sure fields are concatenated appropriately before returning
+        self._concatenate_fields()
+        # Other fields from the source system
+        for key, value in self.data.items():
+            # Skip NaN's
+            if pd.isna(value) or (not value):
+                continue
+            # Map field name to Elements
+            match self.fields_from_source.get(key):
+                # Not to be mapped, discard
+                case None:
+                    continue
+                # Person field: extract separately
+                case e_key if e_key in self.person_fields:
+                    self._persons[e_key] = value
+                # If property descriptor exists, use it
+                case e_key if e_key in self.properties:
+                    yield e_key, getattr(self, e_key.replace('_', '-'))
+                # If validator exists, use it
+                case e_key if hasattr(self, f'{e_key}_validator'):
+                    yield e_key, getattr(self, f'{e_key}_validator')(value)
+                case e_key:
+                    yield e_key, value
+
+    @property
+    def persons(self):
+        # Add the current user's names if needed to the list of persons
+        if hasattr(self, 'user_author_mapping'):
+            user = { k: self.data[k] for k in self.user_author_mapping if not pd.isna(self.data[k]) }
+            persons = ElementsPersonList(self._persons, self.parser, user)
+        else:
+            persons = ElementsPersonList(self._persons, self.parser)
+        for person in persons:
             person.update({'category': self.category,
                            'id': self.id})
             yield person
@@ -265,19 +293,23 @@ class ElementsMetadataRow:
 
     @property
     def start_date(self):
-        return ElementsMetadataRow.convert_date(getattr(self, '_start_date'))
+        source_key = self.fields['start_date']
+        return ElementsMetadataRow.convert_date(self.data[source_key])
     
     @property
     def end_date(self):
-        return ElementsMetadataRow.convert_date(getattr(self, '_end_date'), False)
+        source_key = self.fields['end_date']
+        return ElementsMetadataRow.convert_date(self.data[source_key], False)
     
     @property
     def institution(self):
-        return self._institution[:200]
+        source_key = self.fields['institution']
+        return self.data[source_key][:200]
 
     @property
     def department(self):
-        return self._department[:100]
+        source_key = self.fields['department']
+        return self.data[source_key][:100]
     
     @property
     def isbn_13(self):
@@ -309,7 +341,7 @@ class ElementsPersonList:
                     return True   
             # If no first name in the parsed name, check initials  
             else: 
-                if self.user['middle_name']:
+                if self.user.get('middle_name'):
                     initials = (self.user['first_name'][0] + self.user['middle_name'][0]).upper()
                 else:
                     initials = self.user['first_name'][0].upper()
