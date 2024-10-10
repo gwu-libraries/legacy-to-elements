@@ -1,0 +1,27 @@
+{
+    "Service": [
+        "Awards, Honors, Recognition",
+        "Professional Memberships",
+        "Editorial Boards & Reviews",
+        "Committees",
+        "Media Contributions",
+        "Presentations",
+        "Community & Other Service",
+        "Consulting, Clinical Practice, and Other Engagment"
+    ],
+    "Research": [
+        "Articles",
+        "Conferences & Workshops",
+        "Books",
+        "Book Chapters",
+        "Scholarly Editorships",
+        "Work in Progress",
+        "Creative Works",
+        "Patents",
+        "Grants",
+        "Colloquia & Research Presentations"
+    ],
+    "Teaching": [
+        "Research Supervision"
+    ]
+}

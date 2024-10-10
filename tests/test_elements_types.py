@@ -1,30 +1,14 @@
 import pytest
-from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, ElementsMetadataRow, LinkType, create_links
+from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, LinkType
 from lyterati_utils.name_parser import AuthorParser
 import pandas as pd
+from tests.rows_fixtures import ACTIVITIES
+
+
 
 @pytest.fixture()
-def mapping():  
-    return ElementsMapping('./tests/test_mapping.csv')
-
-@pytest.fixture()
-def row():
-    return {'college_name': 'School of Pub Hlth & Hlth Serv',
-            'department_name': 'Biostatistics&Bioinformatics',
-            'last_name': 'Krandall',
-            'first_name': 'Heath',
-            'heading_type': pd.NA,
-            'contribution_year': '2001.0',
-            'additional_details': 'Invited Participant: 2001',
-            'url': pd.NA,
-            'school_code': 'old_SPH',
-            'report_code': 'Presentations',
-            'category': 'Service',
-            'service_heading': 'Presentations',
-            'name': 'National Human Genome Research Institute',
-            'collaborators': 'Ledger H, Bar H, and CE Heath',
-            'middle_name': 'A',
-            'gw_id': '9999999'}
+def activity_inputs():
+    return ACTIVITIES
 
 @pytest.fixture()
 def seed():
@@ -43,14 +27,14 @@ def seed():
             'name': 'GenomeWeb',
             'collaborators': pd.NA,
             'middle_name': 'A',
-            'gw_id': '9999999'}
+            'gw_id': 'G9999991'}
 
 @pytest.fixture()
 def user():
     return {'first_name': 'Heath', 
             'last_name': 'Krandall',
             'middle_name': 'A',
-            'gw_id': '9999999'}
+            'gw_id': 'G99999991'}
 
 @pytest.fixture()
 def minter(seed):
@@ -58,137 +42,87 @@ def minter(seed):
     minter.mint_id(seed.values())
     return minter
 
-
 @pytest.fixture()
 def parser():
     return AuthorParser()
 
 @pytest.fixture()
-def metadata_row(row, mapping, minter, parser):
-    return ElementsMetadataRow(row, SourceHeading.SERVICE, mapping, minter, parser), minter
+def activity_mapping(minter, parser):  
+    return ElementsMapping('./tests/activity-mapping.csv', minter, parser, user_id_field='gw_id')
 
 @pytest.fixture()
-def person_list(metadata_row):
-    return metadata_row[0]._persons
+def activity_rows(activity_inputs, activity_mapping):
+    return [ activity_mapping.make_mapped_row(_input, SourceHeading.SERVICE) for _input in activity_inputs ]
 
 
 class TestElementsMapping:
 
-    def test_object_mapping(self, mapping):
+    def test_object_mapping(self, activity_mapping):
 
-        assert mapping.object_type_map == {'Media Contributions': 'broadcast-interview',
-                                                'Committees': 'committee-membership',
-                                                'Community Service & Other Service': 'community-service',
-                                                'Consulting, Clinical Practice, and Other Engagements': 'consulting-advisory',
-                                                'Awards and Honors': 'distinction',
-                                                'Editorial Boards & Reviews': 'editorial',
-                                                'Professional Memberships': 'membership',
-                                                'Presentations': 'non-research-presentation'}
+        assert activity_mapping.object_type_map['Committees'] == 'committee-membership'
     
-    def test_field_type_mapping(self, mapping):
+    def test_field_type_mapping(self, activity_mapping):
 
-        assert mapping.field_type_map == {'title': 'text',
-                                            'description': 'text',
-                                            'start-date': 'date',
-                                            'end-date': 'date',
-                                            'membership-type': 'choice',
-                                            'employee-type': 'choice',
-                                            'office-type': 'choice',
-                                            'event-type': 'choice',
-                                            'publication-type': 'choice',
-                                            'service-type': 'choice',
-                                            'org-type': 'choice',
-                                            'review-type': 'choice',
-                                            'assessment-type': 'choice',
-                                            'event-start-date': 'date',
-                                            'event-end-date': 'date',
-                                            'co-contributors': 'person-list',
-                                            'institution': 'address-list',
-                                            'organisation': 'address-list',
-                                            'department': 'text',
-                                            'location': 'address-list',
-                                            'event-name': 'text',
-                                            'invited': 'boolean',
-                                            'keynote': 'boolean',
-                                            'competitive': 'boolean',
-                                            'amount': 'integer',
-                                            'person': 'person',
-                                            'url': 'url',
-                                            'committee-role': 'choice',
-                                            'administrative-role': 'choice',
-                                            'service-role': 'choice',
-                                            'supervisory-role': 'choice',
-                                            'awarded-amount': 'money',
-                                            'distinction-type': 'choice',
-                                            'country': 'choice'}
+        assert activity_mapping.field_type_map['c-additional-details'] == 'text'
+
         
-    def test_column_mapping(self, mapping):
+    def test_column_mapping(self, activity_mapping):
 
-        assert mapping.column_map == {'Media Contributions': {'name': 'title',
-                                        'contribution_year': 'start-date',
-                                        'heading_type': 'department',
-                                        'url': 'url'},
-                                        'Committees': {'name': 'title',
-                                        'contribution_year': 'start-date',
-                                        'heading_type': 'membership-type',
-                                        'url': 'url'},
-                                        'Community Service & Other Service': {'contribution_year': 'start-date',
-                                        'heading_type': 'service-type',
-                                        'name': 'organisation',
-                                        'url': 'url'},
-                                        'Consulting, Clinical Practice, and Other Engagements': {'heading_type': 'description',
-                                        'contribution_year': 'start-date',
-                                        'name': 'organisation',
-                                        'url': 'url'},
-                                        'Awards and Honors': {'heading_type': 'title',
-                                        'contribution_year': 'start-date',
-                                        'name': 'institution',
-                                        'url': 'url'},
-                                        'Editorial Boards & Reviews': {'name': 'title',
-                                        'contribution_year': 'start-date',
-                                        'heading_type': 'publication-type',
-                                        'url': 'url'},
-                                        'Professional Memberships': {'heading_type': 'description',
-                                        'contribution_year': 'start-date',
-                                        'name': 'institution',
-                                        'url': 'url'},
-                                        'Presentations': {'contribution_year': 'start-date',
-                                        'collaborators': 'co-contributors',
-                                        'name': 'organisation',
-                                        'url': 'url'}}
+        assert activity_mapping.column_map['Media Contributions']['name'] == 'title'
 
 
 class TestLinkType:
 
     def test_creating_link_type_from_category(self):
-        assert LinkType.from_object(SourceHeading.SERVICE) == LinkType.ACTIVITY
-
-class TestLinker:
-
-    def test_creating_link_from_user_to_work(self, user, metadata_row):
-        assert create_links(user['gw_id'], metadata_row[0].id, SourceHeading.SERVICE) == {'category-1': 'activity', 'id-1': '5c8c12', 'category-2': 'user', 'id-2': '9999999', 'link-type-id': 23}
+        assert LinkType.from_object(SourceHeading.SERVICE.category) == LinkType.ACTIVITY
 
 class TestElementsObjectID:
 
-    def test_id_minter(self, metadata_row):
-        assert len(set(metadata_row[1].used.values())) == 2
+    def test_collisions(self, minter, activity_inputs):
+        id1 = minter.mint_id(activity_inputs[0].values())
+        id2 = minter.mint_id(activity_inputs[1].values()) 
+        assert id1 != id2
+        new_row = activity_inputs[1]
+        assert minter.mint_id(new_row.values()) == id2        
 
-    def test_collisions(self, minter, row):
-        id1 = minter.mint_id(row.values())
-        id2 = minter.mint_id(row.values()) 
-        assert id1 == id2
-        row['college_name'] = 'Gelman Library'
-        assert minter.mint_id(row.values()) != id2        
+class TestElementsActivityMetadata:
 
-class TestElementsMetadataRow:
+    def test_activity_row_attributes(self, activity_rows):
+        
+        assert activity_rows[0].data['additional_details'] == 'An additional detail'
+        assert activity_rows[0].start_date == '2023-01-01'
+        assert activity_rows[1].elements_fields == {'title': 'name', 'start-date': 'contribution_year', 'url': 'url', 'c-additional-details': 'additional_details'}
 
-    def test_row(self, metadata_row):
-        assert dict(metadata_row[0]) == {'category': 'activity', 'type': 'non-research-presentation', 'start-date': '2001-01-01', 'organisation': 'National Human Genome Research Institute', 'id': '5c8c12'}
+    def test_activity_rows_iter(self, activity_rows):
+        mapped_dict = dict(activity_rows[0])
+        assert mapped_dict['title'] == 'U.S. Department of State Office of Science and Technology Cooperation'
+        assert mapped_dict['id'] == '5e31bac6'
+        assert mapped_dict['c-additional-details'] == 'An additional detail'
+
     
-    def test_persons(self, metadata_row):
-        assert list(metadata_row[0].extract_person_list()) == [{'category': 'activity', 'first-name': 'H', 'surname': 'Ledger', 'full': 'H Ledger', 'field-name': 'co-contributors', 'id': '5c8c12'}, {'category': 'activity', 'first-name': 'H', 'surname': 'Bar', 'full': 'H Bar', 'field-name': 'co-contributors', 'id': '5c8c12'}, {'category': 'activity', 'first-name': 'CE', 'surname': 'Heath', 'full': 'CE Heath', 'field-name': 'co-contributors', 'id': '5c8c12'}]
+    def test_activity_persons(self, activity_rows):
+        for _ in activity_rows[0]:
+            continue
+        persons = [p for p in activity_rows[0].persons]
+        assert persons == []
+        for _ in activity_rows[2]:
+            continue
+        #persons = [p for p in activity_rows[2].persons]
+        persons = [p for p in activity_rows[2].persons]
+        assert persons[0]['first-name'] == 'CS'
+        assert persons[0]['surname'] == 'Gunsolly'
+        assert persons[0]['full'] == 'CS Gunsolly'
+        assert persons[0]['field-name'] == 'co-contributors'
+        assert persons[0]['id'] == '1c3c4d93'
+        assert len(persons) == 4
+        # All persons for the row should have the same id as the row itself
+        assert {activity_rows[2].id} == {person['id'] for person in persons}
     
-class TestElementsPersonList:
+    def test_link_creation(self, activity_rows):
+        link_row = activity_rows[0].link
+        assert link_row['link-type-id'] == 23
+        assert link_row['id-2'] == 'G99999998'
+        assert link_row['id-1'] == '5e31bac6'
+        assert link_row['category-1'] == 'activity'
 
-    def test_persons(self, person_list):
-        assert person_list.parse_names(person_list.persons['co-contributors']) == [{'first-name': 'H', 'surname': 'Ledger', 'full': 'H Ledger'}, {'first-name': 'H', 'surname': 'Bar', 'full': 'H Bar'}, {'first-name': 'CE', 'surname': 'Heath', 'full': 'CE Heath'}]
+        

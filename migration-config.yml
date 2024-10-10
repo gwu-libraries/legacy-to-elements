@@ -1,0 +1,52 @@
+# -------------------- Lyterati XML Profile -------------------------------------------------------------------------------------------------
+# The id_source is expected to consist of an XML file from Lyterati containing faculty user IDs, names, and department and school affiliation.
+# This file is used to match rows from the various Lyterati service/teaching/research reports with their user IDs for import into Elements
+id_source: ./data/lyterati-xml/expert-finder-feed/fis_faculty.xml
+# Field name in the XML that corresponds to the unique user ID
+profile_id_field: gw_id
+# Field names to extract from the XML
+profile_fields: 
+ - first_name
+ - middle_name
+ - last_name
+ - home_college
+ - home_department
+ - gw_id
+# Mapping from XML profile to Lyterati reporting column names
+profile_field_map:
+  home_college: college_name
+  home_department: department_name
+# Field names for merging with Lyterati reports
+merge_fields: ['first_name', 'last_name', 'college_name', 'department_name']
+# -------------------- Lyterati Activity Reports ----------------------------------------------------------------------------------------------
+# This JSON file contains a mapping from the broader categories of data (Research, Teaching Service) to the individual reports available in Lyterati
+# The data_migrator script uses this mapping to aggregate reports by category, where the categories correspond to categories in Elements.
+# The categories also correspond to the enum attributes defined in elements_types.SourceHeading
+lyterati_type_mapping: ./category-mapping.json
+# -------------------- Lyterati-Elements Transform ------------------------------------------------------------------------------------------
+# Output files will be prefixed with the category of object (activity/publication/teaching-activity) as required by Elements
+output_dir: ./data/to-migrate/sftp
+# File that stores unique identifiers on Elements objects. It's import to preserve this file to avoid duplicating objects on subsequent uploads.
+object_id_store: ./data/to-migrate/unique-ids.csv
+# Decision sheets from Elements mapping exercise, by category
+mapping:
+  activity: professional-activities-decision_10-04-2024.csv
+  teaching-activity: teaching-acitivities-decision_10-08-2024.csv
+  publication: 
+# Choice lists: these files map Elements choice items to Lyterati values, or in the case where no mapping is required, they provide a list of choice items
+# Each file should be a spreadsheet containing tabs for each underlying choice field used in that category
+choice_lists:
+  activity: "Professional Actitivies Choice Lists.xlsx"
+# Fields from the Lyterati reports to concatenate, by category
+# For each category, the fields specified as keys will have their values concatenated with the values of the fields listed in association with those keys
+# Note that the fields correspond to column names in the LYTERATI reports, not Elements fields, since the concatenation is done prior to mapping
+concat_fields:
+  activity:
+    additional_details: ['heading_type', 'collaborators']
+  teaching-activity:
+    additional_details: ['placement_type', 'role', 'degree_type']
+  publication:
+    additional_details: ['authors']
+# Lyterati fields for adding the faculty user to the list of co-authors
+user_author_mapping:
+  fields: ['first_name', 'middle_name', 'last_name']

@@ -1,7 +1,6 @@
 from __future__ import annotations
 from datetime import date
 import pandas as pd
-from enum import Enum
 from hashlib import sha256
 from .name_parser import AuthorParser, Author
 from typing import Optional, NamedTuple
@@ -9,6 +8,7 @@ from collections import namedtuple
 import logging
 import re
 from functools import partial
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -62,9 +62,9 @@ class LinkType(Enum):
     CONTRIBUTOR = 92
 
     @classmethod
-    def from_object(cls, heading: SourceHeading, type: str=None):
+    def from_object(cls, category: str, type: str=None):
         '''Selects a link type based on the Elements object category and an optional object type'''
-        match (heading.category, type):
+        match (category, type):
             case ('activity', None):
                 return cls.ACTIVITY
             case ('teaching-activity', None):
@@ -72,13 +72,6 @@ class LinkType(Enum):
 
 
 LINK_HEADERS = ['category-1', 'id-1', 'category-2', 'id-2', 'link-type-id']
-
-def create_links(user_id: str, work_id: str, heading: SourceHeading, object_type: Optional[str]=None) -> dict[str, str]:
-    '''Returns dictionary linking object IDs to the supplied user ID, using the category and link type associated with the supplied instance of SourceHeading'''
-    category = heading.category
-    link_type_id = LinkType.from_object(heading, object_type).value
-    return dict(zip(LINK_HEADERS, [category, work_id, 'user', user_id, link_type_id]))
-
 
 def normalize(column_str: str) -> str:
     '''Normalizes column names to lower-case, underscore-separated'''
@@ -120,6 +113,7 @@ class ElementsMapping:
     def __init__(self, path_to_mapping: str, 
                 minter: ElementsObjectID, 
                 parser: AuthorParser, 
+                user_id_field: str,
                 path_to_choice_lists: str=None, 
                 concat_fields: dict[str: list[str]]=None,
                 user_author_mapping: list[str]=None):
@@ -128,7 +122,8 @@ class ElementsMapping:
         '''
         self.minter = minter
         self.parser = parser
-        self.choice_map = self.build_choice_map(path_to_choice_lists) if path_to_choice_lists else None
+        self.user_id_field = user_id_field
+        self.choice_map = self.build_choice_map(path_to_choice_lists) if path_to_choice_lists else {}
         self.mapping = pd.read_csv(path_to_mapping)
         # Use the second row as the column heading
         self.mapping.columns = self.mapping.iloc[0].values
@@ -180,16 +175,17 @@ class ElementsMapping:
     def make_mapped_row(self, row: dict[str, str] | NamedTuple, map_type: SourceHeading) -> ElementsMetadataRow:
         '''Input is a dict with the keys (or namedtuple with attributes) corresponding to column names in the source system, and values corresponding to a row of data. Outputs an instance of ElementsMetadataRow for mapping that data to Elements fields.'''
          # source_type is the input that determines the Element object type
-        if isinstance(row, namedtuple):
+        if hasattr(row, '_asdict'):
             source_type = getattr(row, map_type.value)
             # Need to remove the pandas Index attribute, as this will cause problems for minting the unique IDs
             row = { k: v for k,v in row._asdict().items() if k != 'Index' }
         else:
             source_type = row[map_type.value]
         mapped_row = ElementsMetadataRow(row)
+        mapped_row.user_id_field = self.user_id_field
         mapped_row.parser = self.parser
         # Elements object category
-        mapped_row.category = source_type.category
+        mapped_row.category = map_type.category
         # Elements object type
         mapped_row.type = self.object_type_map[source_type]
         mapped_row.id = self.minter.mint_id(row.values())
@@ -222,7 +218,6 @@ class ElementsMetadataRow:
     def __init__(self, row: dict[str, str]):
         '''Used to create a row for the metadata import out of a row of Lyterati data. If the namedtuple comes from a pandas DataFrame, the Index column will be discarded. The instance of ElementsMapping provides the column mapping from Lyterati. The row parameter accepts a dict or namedtuple. The instance of ElementsObjectID is used to create unique ID's for each object.'''
         self.data = row
-        self._persons = {}
 
     def _concatenate_fields(self):
         '''Updates data to concatenate fields before returning mapped fields.'''
@@ -234,6 +229,8 @@ class ElementsMetadataRow:
                     self.data[v] += f'\n\n(Legacy) {k}: {concat_value}'
 
     def __iter__(self):
+        # Re-initialize _persons before every iteration, or else we'll create duplicates
+        self._persons = {}
         # Fields every row will have
         yield 'id', self.id
         yield 'category', self.category
@@ -255,7 +252,7 @@ class ElementsMetadataRow:
                     self._persons[e_key] = value
                 # If property descriptor exists, use it
                 case e_key if e_key in self.properties:
-                    yield e_key, getattr(self, e_key.replace('_', '-'))
+                    yield e_key, getattr(self, e_key.replace('-', '_'))
                 # If validator exists, use it
                 case e_key if hasattr(self, f'{e_key}_validator'):
                     yield e_key, getattr(self, f'{e_key}_validator')(value)
@@ -264,8 +261,13 @@ class ElementsMetadataRow:
 
     @property
     def persons(self):
-        # Add the current user's names if needed to the list of persons
+        # Can't call persons unless __iter__ has been called already
+        # In this case, we return None
+        if not hasattr(self, '_persons'):
+            logger.error(f'Cannot access the persons attribute of {self} before invoking the __iter__ method.')
+            return
         if hasattr(self, 'user_author_mapping'):
+            # Add the current user's names if needed to the list of persons
             user = { k: self.data[k] for k in self.user_author_mapping if not pd.isna(self.data[k]) }
             persons = ElementsPersonList(self._persons, self.parser, user)
         else:
@@ -274,6 +276,11 @@ class ElementsMetadataRow:
             person.update({'category': self.category,
                            'id': self.id})
             yield person
+    
+    @property
+    def link(self):
+        link_type_id = LinkType.from_object(self.category, None).value
+        return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id]))
     
     @staticmethod
     def convert_date(date_str: str, start_date: bool=True) -> str:
@@ -293,22 +300,22 @@ class ElementsMetadataRow:
 
     @property
     def start_date(self):
-        source_key = self.fields['start_date']
+        source_key = self.elements_fields['start-date']
         return ElementsMetadataRow.convert_date(self.data[source_key])
     
     @property
     def end_date(self):
-        source_key = self.fields['end_date']
+        source_key = self.elements_fields['end-date']
         return ElementsMetadataRow.convert_date(self.data[source_key], False)
     
     @property
     def institution(self):
-        source_key = self.fields['institution']
+        source_key = self.elements_fields['institution']
         return self.data[source_key][:200]
 
     @property
     def department(self):
-        source_key = self.fields['department']
+        source_key = self.elements_fields['department']
         return self.data[source_key][:100]
     
     @property
