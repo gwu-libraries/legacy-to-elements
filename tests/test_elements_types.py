@@ -2,13 +2,20 @@ import pytest
 from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, LinkType
 from lyterati_utils.name_parser import AuthorParser
 import pandas as pd
-from tests.rows_fixtures import ACTIVITIES
-
+from tests.rows_fixtures import ACTIVITIES, TEACHING_ACTIVITIES, PUBLICATIONS
 
 
 @pytest.fixture()
 def activity_inputs():
     return ACTIVITIES
+
+@pytest.fixture()
+def teaching_activity_inputs():
+    return TEACHING_ACTIVITIES
+
+@pytest.fixture()
+def publication_inputs():
+    return PUBLICATIONS
 
 @pytest.fixture()
 def seed():
@@ -48,12 +55,29 @@ def parser():
 
 @pytest.fixture()
 def activity_mapping(minter, parser):  
-    return ElementsMapping('./tests/activity-mapping.csv', minter, parser, user_id_field='gw_id')
+    return ElementsMapping('./tests/activity-mapping.csv', minter, parser, user_id_field='gw_id', path_to_choice_lists='./tests/activities-choice-list.xlsx')
 
 @pytest.fixture()
 def activity_rows(activity_inputs, activity_mapping):
     return [ activity_mapping.make_mapped_row(_input, SourceHeading.SERVICE) for _input in activity_inputs ]
 
+@pytest.fixture()
+def teaching_activity_mapping(minter, parser):
+    concat_fields = { 'additional_details': ['placement_type', 'role', 'degree_type'] }
+    return ElementsMapping('./tests/teaching-activity-mapping.csv', minter, parser, user_id_field='gw_id', concat_fields=concat_fields)
+
+@pytest.fixture()
+def teaching_activity_rows(teaching_activity_inputs, teaching_activity_mapping):
+    return [ teaching_activity_mapping.make_mapped_row(_input, SourceHeading.TEACHING) for _input in teaching_activity_inputs ]
+
+
+@pytest.fixture()
+def publication_mapping(minter, parser):
+    return ElementsMapping('./tests/publication-mapping.csv', minter, parser, user_id_field='gw_id')
+
+@pytest.fixture()
+def publication_rows(publication_inputs, publication_mapping):
+    return [ publication_mapping.make_mapped_row(_input, SourceHeading.RESEARCH) for _input in publication_inputs ]
 
 class TestElementsMapping:
 
@@ -68,7 +92,7 @@ class TestElementsMapping:
         
     def test_column_mapping(self, activity_mapping):
 
-        assert activity_mapping.column_map['Media Contributions']['name'] == 'title'
+        assert activity_mapping.column_map['Media Contributions']['name'] == ['title']
 
 
 class TestLinkType:
@@ -98,6 +122,14 @@ class TestElementsActivityMetadata:
         assert mapped_dict['title'] == 'U.S. Department of State Office of Science and Technology Cooperation'
         assert mapped_dict['id'] == '5e31bac6'
         assert mapped_dict['c-additional-details'] == 'An additional detail'
+    
+    def test_choice_constraint(self, activity_rows):
+        mapped_dict = dict(activity_rows[3])
+        assert mapped_dict['c-membership-type'] == 'Professional'
+        activity_rows[3].data['heading_type'] = 'professional'
+        with pytest.warns():
+            mapped_dict = dict(activity_rows[3])
+        assert not mapped_dict.get('c-membership-type')
 
     
     def test_activity_persons(self, activity_rows):
@@ -126,3 +158,34 @@ class TestElementsActivityMetadata:
         assert link_row['category-1'] == 'activity'
 
         
+class TestElementsTeachingActivityMetadata:
+
+    def test_row_attributes(self, teaching_activity_rows):
+        assert teaching_activity_rows[0].data['role'] == 'Faculty mentor'
+        assert teaching_activity_rows[0].start_date == '2021-09-01'
+        assert teaching_activity_rows[0].end_date == '2022-05-31'
+    
+    def test_row_iter(self, teaching_activity_rows):
+        #  Test for properly concatenated fields
+        row_dict = dict(teaching_activity_rows[0])
+        assert row_dict['c-additional-details'].startswith('During 2022 I mentored an accounting student')
+        assert row_dict['c-additional-details'].endswith('(Legacy) role: Faculty mentor\n\n(Legacy) degree_type: Undergraduate')
+
+    def test_link_creation(self, teaching_activity_rows):
+        link_row = teaching_activity_rows[0].link
+        assert link_row['link-type-id'] == 83
+        assert link_row['id-2'] == 'G999999996'
+        assert link_row['id-1'] == '579ef083'
+        assert link_row['category-1'] == 'teaching-activity'
+
+class TestElementsPublicationMetadata:
+
+    def test_row_attributes(self, publication_rows):
+        assert publication_rows[0].publication_date == '2014-01-01'
+        assert publication_rows[0].doi is None
+        assert publication_rows[1].doi == '10.1007/978-4-031-37776-6_19'
+    
+    def test_row_iter(self, publication_rows):
+        # Test for source fields mapped to multiple Elements fields
+        row_dict = dict(publication_rows[1])
+        print(row_dict)

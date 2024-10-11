@@ -10,7 +10,7 @@ from datetime import datetime
 from lyterati_utils.doi_parser import Parser
 from lyterati_utils.name_parser import AuthorParser
 import re
-from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, ElementsMetadataRow, create_links
+from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, ElementsMetadataRow
 
 
 logger = logging.getLogger(__name__)

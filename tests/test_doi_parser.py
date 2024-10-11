@@ -38,26 +38,26 @@ def extract_test_lines(file):
 class TestDOIParser:
 
     def test_parse_multiline(self, multiline_doi):
-        assert Parser(multiline_doi).doi == '10.1097/NNE.0000000000000571'
+        assert Parser(multiline_doi).extract_doi() == '10.1097/NNE.0000000000000571'
     
     def test_parse_patent_number(self, patent):
-        assert Parser(patent).doi is None
+        assert Parser(patent).extract_doi() is None
     
     def test_parse_dois(self, dois):
         for text, doi in dois:
             doi = doi.strip()
             if doi == '':
-                assert Parser(text).doi is None
+                assert Parser(text).extract_doi() is None
             else:
-                assert Parser(text).doi == doi
+                assert Parser(text).extract_doi() == doi
     
     def test_parse_doi_as_url(self, doi_urls):
         for url, doi in doi_urls:
             doi = doi.strip()
             if doi == '':
-                assert Parser(url, is_url=True).doi is None
+                assert Parser(url, is_url=True).extract_doi() is None
             else:
-                assert Parser(url, is_url=True).doi == doi
+                assert Parser(url, is_url=True).extract_doi() == doi
     
     def test_parse_isbns(self, isbns):
         for txt, id_ in isbns:
@@ -65,6 +65,6 @@ class TestDOIParser:
             if not number:
                 number = None
             if format == 'url':
-                assert Parser(txt, True).isbn == number
+                assert Parser(txt, True).extract_isbn() == number
             else:
-                assert Parser(txt).isbn == number
+                assert Parser(txt).extract_isbn() == number

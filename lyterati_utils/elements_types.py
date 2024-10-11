@@ -3,15 +3,14 @@ from datetime import date
 import pandas as pd
 from hashlib import sha256
 from .name_parser import AuthorParser, Author
-from typing import Optional, NamedTuple
-from collections import namedtuple
-import logging
+from typing import Optional, NamedTuple, Iterator
+from collections import defaultdict
 import re
 from functools import partial
 from enum import Enum
+from .doi_parser import Parser
+import warnings
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 class TermDates(Enum):
     '''Month and day for date of term'''
@@ -136,10 +135,13 @@ class ElementsMapping:
         # For each record type in the source system, maps the associated fields to the underlying fields in Elements
         self.column_map = {}
         for key, _ in self.object_type_map.items():
-            self.column_map[key] = { normalize(source_key): el_key.strip('"') 
-                                    for el_key, source_key in self.mapping[[self.mapping.columns[0], key]].values[2:] 
-                                    if not pd.isna(source_key) and source_key }
-        # Fields to concatenate in the source system
+            self.column_map[key] = defaultdict(list)
+            for el_key, source_key in self.mapping[[self.mapping.columns[0], key]].values[2:]:
+                # The same source system field may map to more than one Elements field. To account for this, we add Elements fields as a list associated with each source system field. (For a many:1 relation between system fields and an Elements field, we use the concat_fields parameter.)
+                if not pd.isna(source_key) and source_key:
+                    source_key = normalize(source_key)
+                    self.column_map[key][source_key].append(el_key.strip('"'))
+        # Fields to concatenate in the source system for matching to a single Elements field
         self.concat_fields = { from_field: to_field for to_field, v in concat_fields.items() 
                                     for from_field in v } if concat_fields else None
         self.user_author_mapping = user_author_mapping
@@ -169,7 +171,7 @@ class ElementsMapping:
         try:
             return choices[value]
         except KeyError:
-            logger.warn(f'Value {value} not in choice list {list(choices.keys())}. Skipping this value because it won\'t map to the underlying choice field.')
+            warnings.warn(f'Value {value} not in choice list {list(choices.keys())}. Skipping this value because it won\'t map to the underlying choice field.')
 
     
     def make_mapped_row(self, row: dict[str, str] | NamedTuple, map_type: SourceHeading) -> ElementsMetadataRow:
@@ -193,8 +195,8 @@ class ElementsMapping:
         # This is the column mapping that determines the applicable Elements columns for this particular type of object
         mapped_row.fields_from_source = self.column_map[source_type] 
         # This provides the name of the Elements fields for each column in the source, inverting the previous dict
-        # Assumes a 1:1 match between source system and Elements fields per type of object
-        mapped_row.elements_fields = { v: k for k, v in mapped_row.fields_from_source.items() }
+        mapped_row.elements_fields = { el_field: source_key for source_key, v in mapped_row.fields_from_source.items() 
+                                        for el_field in v}
         # Person fields are handled separately
         mapped_row.person_fields = [ k for k in mapped_row.elements_fields if self.field_type_map[k] in ['person', 'person-list'] ]
         # Whether to include the user in the person data
@@ -210,7 +212,7 @@ class ElementsMetadataRow:
     '''Represents a single row for import data for Elements'''
     # Fields for which we want @property access, because we want to apply some formatting or type constraints
     # Note that these field names use hyphens, not underscores, to match the Elements fields
-    properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13']
+    properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13', 'publication-date']
 
     is_year = re.compile(r'((?:19|20)\d{2})(\.0)?')
     is_term = re.compile(r'(Spring|Fall|Summer) ((?:19|20)\d{2})')
@@ -225,10 +227,10 @@ class ElementsMetadataRow:
             for k, v in self.concat_fields.items():
                 concat_value = self.data.get(k)
                 # Only concat if something to add
-                if concat_value:
+                if not pd.isna(concat_value) and concat_value:
                     self.data[v] += f'\n\n(Legacy) {k}: {concat_value}'
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str, str]:
         # Re-initialize _persons before every iteration, or else we'll create duplicates
         self._persons = {}
         # Fields every row will have
@@ -243,29 +245,26 @@ class ElementsMetadataRow:
             if pd.isna(value) or (not value):
                 continue
             # Map field name to Elements
-            match self.fields_from_source.get(key):
-                # Not to be mapped, discard
-                case None:
-                    continue
+            # There may be more than one Elements field to be derived
+            for e_key in self.fields_from_source.get(key, []):
                 # Person field: extract separately
-                case e_key if e_key in self.person_fields:
+                if e_key in self.person_fields:
                     self._persons[e_key] = value
                 # If property descriptor exists, use it
-                case e_key if e_key in self.properties:
+                elif e_key in self.properties:
                     yield e_key, getattr(self, e_key.replace('-', '_'))
                 # If validator exists, use it
-                case e_key if hasattr(self, f'{e_key}_validator'):
+                elif hasattr(self, f'{e_key}_validator'):
                     yield e_key, getattr(self, f'{e_key}_validator')(value)
-                case e_key:
+                else:
                     yield e_key, value
 
     @property
-    def persons(self):
+    def persons(self) -> Iterator[dict[str, str]]:
         # Can't call persons unless __iter__ has been called already
         # In this case, we return None
         if not hasattr(self, '_persons'):
-            logger.error(f'Cannot access the persons attribute of {self} before invoking the __iter__ method.')
-            return
+            raise Exception(f'Cannot access the persons attribute of {self} before invoking its __iter__ method.')
         if hasattr(self, 'user_author_mapping'):
             # Add the current user's names if needed to the list of persons
             user = { k: self.data[k] for k in self.user_author_mapping if not pd.isna(self.data[k]) }
@@ -291,16 +290,27 @@ class ElementsMetadataRow:
             term_suffix = '_START' if start_date else '_END'
             return date(year, *TermDates[m.group(1).upper() + term_suffix].value).strftime('%Y-%m-%d')
         else:
-            logger.error(f'Unable to covert date string {date_str}. Skipping it.') 
+            warnings.warn(f'Unable to covert date string {date_str}. Skipping it.') 
             return
 
     @property
     def doi(self):
-        pass
+        '''Not a great solution, hard-coding the URL field from the source system, but we need to check multipled fields for DOI's without concatenating the fields in the output.'''
+        source_key = self.elements_fields['doi']
+        doi = Parser.extract_doi(self.data[source_key])
+        if not doi:
+            return Parser.extract_doi(self.data.get('url', ''))
+        return doi
+
 
     @property
     def start_date(self):
         source_key = self.elements_fields['start-date']
+        return ElementsMetadataRow.convert_date(self.data[source_key])
+
+    @property
+    def publication_date(self):
+        source_key = self.elements_fields['publication-date']
         return ElementsMetadataRow.convert_date(self.data[source_key])
     
     @property
@@ -320,7 +330,29 @@ class ElementsMetadataRow:
     
     @property
     def isbn_13(self):
-        pass
+        source_key = self.elements_fields['isbn-13']
+        return Parser.extract_isbn(self.data[source_key])
+    
+    @property
+    def external_identifiers(self):
+        '''
+        Note from Elements team:
+        An identifier consists of both a scheme(external system/type) and a value, these are separated by a colon. 
+        Each identifier must be enclosed in single quotes, any quotes within an identifier must be escaped with a backslash. If a value contains colon it does not need to be escaped, since the identifier will only be split on the first identifier. 
+        An identifier scheme cannot contain a colon. An identifier scheme must be one of the following values (meaning in brackets):
+
+        pmc (PubMed Central ID)
+        arxiv (arXiv ID)
+        pubmed (PubMed ID)
+        doi
+        nihms (NIH Manuscript Submission ID)
+        isidoc (Thomson Reuters Document Solution ID) 
+
+        Below is an example of a possible value of an identifiers field:
+        'arxiv:quant-ph/0612120';'pmc:PMC3348095';'pubmed:22547652'
+        '''
+        source_key = self.elements_fields['external-identifiers']
+        return Parser.extract_pmids(self.data[source_key])
 
 class ElementsPersonList:
     '''Represents one or more rows of persons (expanded) data for import into Elements'''
