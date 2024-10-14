@@ -139,7 +139,6 @@ class TestElementsActivityMetadata:
         assert persons == []
         for _ in activity_rows[2]:
             continue
-        #persons = [p for p in activity_rows[2].persons]
         persons = [p for p in activity_rows[2].persons]
         assert persons[0]['first-name'] == 'CS'
         assert persons[0]['surname'] == 'Gunsolly'
@@ -187,5 +186,20 @@ class TestElementsPublicationMetadata:
     
     def test_row_iter(self, publication_rows):
         # Test for source fields mapped to multiple Elements fields
-        row_dict = dict(publication_rows[1])
-        print(row_dict)
+        row_dict = dict(publication_rows[2])
+        assert row_dict == {'id': '4b33df5e', 'category': 'publication', 'type': 'journal-article', 'publication-date': '2019-01-01', 'title': 'Impact of Impact and Impact Assistance on Journal Impact Factor for Academic Tenure', 'journal': 'Journal of Impacts in Pataphysics', 'doi': '10.1080/21551.2019.16221', 'external-identifiers': "'pmid:311244'"}
+    
+    def test_persons_iter(self, publication_rows):
+        user_author_mapping = ['first_name', 'middle_name', 'last_name']
+        # Case 1: User is in list of authors => should not be duplicated
+        publication_rows[2].user_author_mapping = user_author_mapping
+        _ = list(publication_rows[2])
+        assert len(list(publication_rows[2].persons)) == 7
+        # Case 2: User is not in list of authors => should be appended
+        publication_rows[1].user_author_mapping = user_author_mapping
+        _ = list(publication_rows[1])
+        assert list(publication_rows[1].persons)[-1]['full'] == 'Penny Pompidour'
+        
+    def test_link_creation(self, publication_rows):
+        link_row = publication_rows[2].link
+        assert link_row == {'category-1': 'publication', 'id-1': '4b33df5e', 'category-2': 'user', 'id-2': 'G9999994', 'link-type-id': 8}

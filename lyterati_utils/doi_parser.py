@@ -8,9 +8,13 @@ import pandas as pd
 # CrossRef's recommended regular expression
 CROSSREF_RE = re.compile(r'(10.\d{4,9}/[-._;()/:A-Z0-9]+)', re.IGNORECASE)
 # PubMed ID regular expression; looks for label in text
-PMID_RE = re.compile(r'(PMID: (\d{1,8}))\b')
+PMID_RE = re.compile(r'PMID:\s?(\d{1,8})\b')
 # PubMedCentral ID 
 PMCID_RE = re.compile(r'(PMC\d+)\b')
+# PubMed URL
+PMID_URL = re.compile(r'https?://(?:pubmed|www)\.ncbi\.nlm\.nih\.gov/(?:(?:pmc/articles/pmid|pubmed)/)?(\d{1,8})(/.*)*$')
+# PMC URL
+PMC_URL = re.compile(r'https?://www\.ncbi\.nlm\.nih\.gov/pmc/articles/(PMC\d+)/?$')
 # ISBN: from  O'Reilly Regular Expressions Cookbook, 2nd edition
 ISBN_RE = re.compile(r'(?:ISBN(?:-13)?:?\ )?(?=[0-9]{13}|(?=(?:[0-9]+[-\ ]){4})[-\ 0-9]{17})(97[89][-\ ]?[0-9]{1,5}[-\ ]?[0-9]+[-\ ]?[0-9]+[-\ ]?[0-9])') 
 
@@ -55,7 +59,10 @@ class Parser:
     def extract_pmids(txt: str, is_url: bool=False) -> Optional[str]:
         '''Extracts text matching the PMID or PMC pattern from a larger string.'''
         txt = Parser.clean_xl_text(txt, is_url)
-        pmid, pmc = PMID_RE.search(txt), PMCID_RE.search(txt)
+        if is_url:
+            pmid, pmc = PMID_URL.match(txt), PMC_URL.match(txt)
+        else:
+            pmid, pmc = PMID_RE.search(txt), PMCID_RE.search(txt)
         if pmid:
             pmid = pmid.group(1)
         if pmc:

@@ -68,6 +68,8 @@ class LinkType(Enum):
                 return cls.ACTIVITY
             case ('teaching-activity', None):
                 return cls.TEACHING
+            case ('publication', None):
+                return cls.AUTHOR
 
 
 LINK_HEADERS = ['category-1', 'id-1', 'category-2', 'id-2', 'link-type-id']
@@ -212,7 +214,7 @@ class ElementsMetadataRow:
     '''Represents a single row for import data for Elements'''
     # Fields for which we want @property access, because we want to apply some formatting or type constraints
     # Note that these field names use hyphens, not underscores, to match the Elements fields
-    properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13', 'publication-date']
+    properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13', 'publication-date', 'external-identifiers']
 
     is_year = re.compile(r'((?:19|20)\d{2})(\.0)?')
     is_term = re.compile(r'(Spring|Fall|Summer) ((?:19|20)\d{2})')
@@ -299,7 +301,7 @@ class ElementsMetadataRow:
         source_key = self.elements_fields['doi']
         doi = Parser.extract_doi(self.data[source_key])
         if not doi:
-            return Parser.extract_doi(self.data.get('url', ''))
+            return Parser.extract_doi(self.data.get('url', ''), is_url=True)
         return doi
 
 
@@ -352,7 +354,14 @@ class ElementsMetadataRow:
         'arxiv:quant-ph/0612120';'pmc:PMC3348095';'pubmed:22547652'
         '''
         source_key = self.elements_fields['external-identifiers']
-        return Parser.extract_pmids(self.data[source_key])
+        ids = Parser.extract_pmids(self.data[source_key])
+        if not all(ids): 
+            url_ids = Parser.extract_pmids(self.data.get('url', ''), is_url=True)
+            # Consolidate non-null values
+            ids = [ _id if _id else url_ids[i] for i, _id in enumerate(ids) ]
+        ids = dict(zip(('pmid', 'pmc'), ids))
+        return ';'.join([ f"'{key}:{value}'" for key, value in ids.items() if value ])
+        
 
 class ElementsPersonList:
     '''Represents one or more rows of persons (expanded) data for import into Elements'''
