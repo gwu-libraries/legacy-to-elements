@@ -1,5 +1,5 @@
 import pytest
-from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, LinkType
+from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, LinkType, ElementsPersonList
 from lyterati_utils.name_parser import AuthorParser
 import pandas as pd
 from tests.rows_fixtures import ACTIVITIES, TEACHING_ACTIVITIES, PUBLICATIONS
@@ -77,7 +77,16 @@ def publication_mapping(minter, parser):
 
 @pytest.fixture()
 def publication_rows(publication_inputs, publication_mapping):
-    return [ publication_mapping.make_mapped_row(_input, SourceHeading.RESEARCH) for _input in publication_inputs ]
+    return [ publication_mapping.make_mapped_row(_input, SourceHeading.RESEARCH) for _input in publication_inputs[:3] ]
+
+@pytest.fixture()
+def person_without_user(parser):
+    return ElementsPersonList({'co-contributors': 'Dean Johnson,'}, parser)
+
+@pytest.fixture()
+def single_person_without_user(parser):
+    return ElementsPersonList({'co-contributors': 'Maribelle Merriweather'}, parser)
+
 
 class TestElementsMapping:
 
@@ -156,6 +165,12 @@ class TestElementsActivityMetadata:
         assert link_row['id-1'] == '5e31bac6'
         assert link_row['category-1'] == 'activity'
 
+    def test_person_failure_to_parse(self, person_without_user):
+        assert list(person_without_user) == []
+
+    def test_single_person_to_parse(self, single_person_without_user):
+        print(list(single_person_without_user))
+
         
 class TestElementsTeachingActivityMetadata:
 
@@ -190,7 +205,7 @@ class TestElementsPublicationMetadata:
         assert row_dict == {'id': '4b33df5e', 'category': 'publication', 'type': 'journal-article', 'publication-date': '2019-01-01', 'title': 'Impact of Impact and Impact Assistance on Journal Impact Factor for Academic Tenure', 'journal': 'Journal of Impacts in Pataphysics', 'doi': '10.1080/21551.2019.16221', 'external-identifiers': "'pmid:311244'"}
     
     def test_persons_iter(self, publication_rows):
-        user_author_mapping = ['first_name', 'middle_name', 'last_name']
+        user_author_mapping = { 'fields': ['first_name', 'middle_name', 'last_name'] }
         # Case 1: User is in list of authors => should not be duplicated
         publication_rows[2].user_author_mapping = user_author_mapping
         _ = list(publication_rows[2])
@@ -203,3 +218,8 @@ class TestElementsPublicationMetadata:
     def test_link_creation(self, publication_rows):
         link_row = publication_rows[2].link
         assert link_row == {'category-1': 'publication', 'id-1': '4b33df5e', 'category-2': 'user', 'id-2': 'G9999994', 'link-type-id': 8}
+
+    def test_unmapped_type(self, publication_inputs, publication_mapping):
+        with pytest.warns():
+            row = publication_mapping.make_mapped_row(publication_inputs[3], SourceHeading.RESEARCH)
+        assert row is None

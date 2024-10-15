@@ -185,6 +185,10 @@ class ElementsMapping:
             row = { k: v for k,v in row._asdict().items() if k != 'Index' }
         else:
             source_type = row[map_type.value]
+        # Check for unmapped types in the source data
+        if source_type not in self.column_map:
+            warnings.warn(f'Unmapped type {source_type} found: skipping.')
+            return None
         mapped_row = ElementsMetadataRow(row)
         mapped_row.user_id_field = self.user_id_field
         mapped_row.parser = self.parser
@@ -230,7 +234,12 @@ class ElementsMetadataRow:
                 concat_value = self.data.get(k)
                 # Only concat if something to add
                 if not pd.isna(concat_value) and concat_value:
-                    self.data[v] += f'\n\n(Legacy) {k}: {concat_value}'
+                    key_string = k.replace('_', ' ').title()
+                    # Check for empty fields
+                    if pd.isna(self.data[v]) or not self.data[v]:
+                        self.data[v] = f'(Legacy) {key_string}: {concat_value}'
+                    else:
+                        self.data[v] += f'\n\n(Legacy) {key_string}: {concat_value}'
 
     def __iter__(self) -> Iterator[str, str]:
         # Re-initialize _persons before every iteration, or else we'll create duplicates
@@ -269,7 +278,7 @@ class ElementsMetadataRow:
             raise Exception(f'Cannot access the persons attribute of {self} before invoking its __iter__ method.')
         if hasattr(self, 'user_author_mapping'):
             # Add the current user's names if needed to the list of persons
-            user = { k: self.data[k] for k in self.user_author_mapping if not pd.isna(self.data[k]) }
+            user = { k: self.data[k] for k in self.user_author_mapping['fields'] if not pd.isna(self.data[k]) }
             persons = ElementsPersonList(self._persons, self.parser, user)
         else:
             persons = ElementsPersonList(self._persons, self.parser)
@@ -415,9 +424,9 @@ class ElementsPersonList:
         match self.parser.parse_one(name_str):
             # Can't parse name: return user's name
             case None, error if self.user:
-                return {'first-name': self.user['first_name'], 
+                return [{'first-name': self.user['first_name'], 
                         'surname': self.user['last_name'], 
-                        'full': f'{self.user["first_name"]} {self.user["last_name"]}'}
+                        'full': f'{self.user["first_name"]} {self.user["last_name"]}'}]
             case result, None if self.user:
                 result = self.parser._post_clean(result)
                 author_matched = False

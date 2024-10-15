@@ -142,5 +142,22 @@ PUBLICATIONS = [ {'college_name': 'School of Engin & App Sc',
                         'category': 'Research',
                         'middle_name': 'Carter',
                         'gw_id': 'G9999994'
-                        }
+                        },
+                        {'college_name': 'School of Business',
+                        'department_name': 'Accountancy',
+                        'last_name': 'Callen',
+                        'first_name': 'Callie',
+                        'research_heading': 'Work in Progress',
+                        'heading_type': 'Journal Article',
+                        'contribution_year': '2019',
+                        'title': 'A Case Study of the Role of Case Studies in Aligning Strategic Plans with Strategic Planning Initiatives: A Best Case Approach',
+                        'authors': 'Dandy Davis, Lavery Law, Karen Karen, Melinda Minnow, Esther Eastman, Callie Callen',
+                        'publication_name': pd.NA,
+                        'additional_details': 'Submitted for review',
+                        'url': pd.NA,
+                        'school_code': 'SON',
+                        'report_code': 'Work in Progress',
+                        'category': 'Research',
+                        'middle_name': 'L.',
+                        'gw_id': 'G99999993'}
                     ]
