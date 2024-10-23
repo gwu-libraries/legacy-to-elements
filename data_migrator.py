@@ -6,17 +6,20 @@ import json
 from pathlib import Path
 from lxml import etree
 import logging
+from logging import getLogger
 from datetime import datetime
 from lyterati_utils.doi_parser import Parser
 from lyterati_utils.name_parser import AuthorParser
 import re
-from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping, ElementsMetadataRow
+from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping
 import yaml
 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+warnings_logger = getLogger("py.warnings")
 logging.captureWarnings(True)
+
 
 with open('./migration-config.yml') as f:
     CONFIG = yaml.load(f, Loader=yaml.FullLoader)
@@ -154,8 +157,8 @@ def update_ids(reports: DataFrame, path_to_id_map: str) -> DataFrame:
         logger.warn(f'After merge, {num_missing} missing IDs remain.')
     return matched
 
-def process_for_elements(df: DataFrame, category: str) -> list[list[dict[str, str]]]:
-    '''df should be the single DataFrame containing the merged Lyterati reports for import. Returns three lists of dicts: metadata, persons, and linking data, for constructing the import files.'''
+def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[str, str]], DataFrame]]:
+    '''df should be the single DataFrame containing the merged Lyterati reports for import. Returns three lists of dicts: metadata, persons, and linking data, for constructing the import files, as well as the original DataFrame, with the list of object IDs appended as column.'''
     elements_category = category.category
     concat_fields = CONFIG['concat_fields'][elements_category]
     path = Path(CONFIG['object_id_store'])
@@ -178,15 +181,19 @@ def process_for_elements(df: DataFrame, category: str) -> list[list[dict[str, st
     metadata_rows = []
     linking_rows = []
     persons_rows = []
+    object_ids = []
     for row in df.itertuples(index=False):
         elements_row = mapper.make_mapped_row(row, map_type=category)
         if not elements_row:
+            object_ids.append(None)
             continue
         metadata_rows.append(dict(elements_row))
         linking_rows.append(elements_row.link)
         persons_rows.extend(list(elements_row.persons))
+        object_ids.append(elements_row.id)
     minter.persist_ids()
-    return metadata_rows, linking_rows, persons_rows
+    df['elements_id'] = object_ids
+    return metadata_rows, linking_rows, persons_rows, df
     
 @click.group()
 def cli():
@@ -199,10 +206,16 @@ def make_import_files(data_source, category):
     data = pd.read_csv(data_source)
     output_dir = Path(CONFIG['output_dir'])
     category = SourceHeading[category.upper()]
-    for name, output in zip(['metadata', 'linking', 'persons'], process_for_elements(data, category)):
+    processed = process_for_elements(data, category)
+    for name, output in zip(['metadata', 'linking', 'persons'], processed[:3]):
         df = pd.DataFrame.from_records(output)
         label = {'publication': 'publications', 'activity': 'activities', 'teaching-activity': 'teaching-activities'}.get(category.category)
         df.to_csv(output_dir / f'{label}-{name}.csv', index=False)
+    # Write original with object ID's for cross-reference
+    data_source_path = Path(data_source).parents[0]
+    file_name = Path(data_source).stem
+    processed[4].to_csv(data_source_path / f'{file_name}_migrated.csv', index=False)
+
 
 @cli.command()
 @click.option('--id-source', default='./data/to-migrate/missing_ids.csv')

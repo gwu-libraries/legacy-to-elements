@@ -124,13 +124,18 @@ class TestElementsActivityMetadata:
         
         assert activity_rows[0].data['additional_details'] == 'An additional detail'
         assert activity_rows[0].start_date == '2023-01-01'
-        assert activity_rows[1].elements_fields == {'title': 'name', 'start-date': 'contribution_year', 'url': 'url', 'c-additional-details': 'additional_details'}
+        assert activity_rows[1].elements_fields == {'title': 'name', 'start-date': 'contribution_year', 'end-date': 'contribution_year', 'url': 'url', 'c-additional-details': 'additional_details'}
 
     def test_activity_rows_iter(self, activity_rows):
         mapped_dict = dict(activity_rows[0])
+        # Type with only start_date defined
         assert mapped_dict['title'] == 'U.S. Department of State Office of Science and Technology Cooperation'
         assert mapped_dict['id'] == '5e31bac6'
         assert mapped_dict['c-additional-details'] == 'An additional detail'
+        assert 'start-date' in mapped_dict and ('end-date' not in mapped_dict)
+        # Type with both start_date and end_date defined 
+        mapped_dict = dict(activity_rows[1])
+        assert mapped_dict['start-date'] == '2016-01-01' and mapped_dict['end-date'] == '2016-12-31'
     
     def test_choice_constraint(self, activity_rows):
         mapped_dict = dict(activity_rows[3])
@@ -169,7 +174,7 @@ class TestElementsActivityMetadata:
         assert list(person_without_user) == []
 
     def test_single_person_to_parse(self, single_person_without_user):
-        print(list(single_person_without_user))
+        assert list(single_person_without_user) == [{'first-name': 'Maribelle', 'surname': 'Merriweather', 'full': 'Maribelle Merriweather', 'field-name': 'co-contributors'}]
 
         
 class TestElementsTeachingActivityMetadata:
@@ -183,13 +188,13 @@ class TestElementsTeachingActivityMetadata:
         #  Test for properly concatenated fields
         row_dict = dict(teaching_activity_rows[0])
         assert row_dict['c-additional-details'].startswith('During 2022 I mentored an accounting student')
-        assert row_dict['c-additional-details'].endswith('(Legacy) role: Faculty mentor\n\n(Legacy) degree_type: Undergraduate')
+        assert row_dict['c-additional-details'].endswith('(Legacy) Role: Faculty mentor\n\n(Legacy) Degree Type: Undergraduate')
 
     def test_link_creation(self, teaching_activity_rows):
         link_row = teaching_activity_rows[0].link
         assert link_row['link-type-id'] == 83
         assert link_row['id-2'] == 'G999999996'
-        assert link_row['id-1'] == '579ef083'
+        assert link_row['id-1'] == 'e40ea606'
         assert link_row['category-1'] == 'teaching-activity'
 
 class TestElementsPublicationMetadata:

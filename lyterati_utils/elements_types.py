@@ -295,7 +295,10 @@ class ElementsMetadataRow:
     @staticmethod
     def convert_date(date_str: str, start_date: bool=True) -> str:
         if m := ElementsMetadataRow.is_year.match(str(date_str)):
-            return date(int(m.group(1)), 1, 1).strftime('%Y-%m-%d')
+            if start_date:
+                return date(int(m.group(1)), 1, 1).strftime('%Y-%m-%d')
+            else:
+                return date(int(m.group(1)), 12, 31).strftime('%Y-%m-%d')
         elif m := ElementsMetadataRow.is_term.match(date_str):
             year = int(m.group(2))
             term_suffix = '_START' if start_date else '_END'
