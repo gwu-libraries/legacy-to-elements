@@ -200,8 +200,8 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--data-source', required=True)
-@click.option('--category', type=click.Choice(['service', 'research', 'teaching'], case_sensitive=False), default='service')
+@click.option('--data-source', required=True) # Should be a single CSV containing the aggregated records for this category
+@click.option('--category', type=click.Choice(['service', 'research', 'teaching'], case_sensitive=False), default='service') # As present in Lyterati -- the config YAML file determines how these are mapped to Elements object categories
 def make_import_files(data_source, category):
     data = pd.read_csv(data_source)
     output_dir = Path(CONFIG['output_dir'])
@@ -218,8 +218,8 @@ def make_import_files(data_source, category):
 
 
 @cli.command()
-@click.option('--id-source', default='./data/to-migrate/missing_ids.csv')
-@click.option('--data-source', required=True)
+@click.option('--id-source', default='./data/to-migrate/missing_ids.csv') # File with ID's missing from the output of prep_lyterati_reports
+@click.option('--data-source', required=True) # Output of prep_lyterati_reports: should be a single CSV
 def add_missing_ids(id_source, data_source):
     '''Adds IDs from the id-source to the data-source, matching on columns defined in the constant MERGE_FIELDS. Result is saved to the original file specified by data-source.'''
     reports = pd.read_csv(data_source)
@@ -227,9 +227,9 @@ def add_missing_ids(id_source, data_source):
     reports.to_csv(data_source, index=False)
 
 @cli.command()
-@click.option('--data-source', default='./data/lyterati-exports')
-@click.option('--target', default='./data/to-migrate')
-@click.option('--exclude', '-e', multiple=True)
+@click.option('--data-source', default='./data/lyterati-exports') # Should be a folder containing one or more CSV files, which will be aggregated and split according to the top-level categories in Lyterati (research, service, teaching)
+@click.option('--target', default='./data/to-migrate') 
+@click.option('--exclude', '-e', multiple=True) # One or more Lyterati record types to exclude, such as Grants or Work in Progress
 def prep_lyterati_reports(data_source, target, exclude):
     '''Values passed to --exclude/-e should correspond to the part of the filename designating either a school or a type of report. For instance, -e grants will exclude all files with "grants" or "Grants" in the title. Matching is case-insensitive.'''
     ids = load_ids_from_profiles()
