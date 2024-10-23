@@ -22,6 +22,12 @@ The `data_migrator.py` script is the entry point for this process. It is designe
 - Various details of configuration are set in `migration-config.yml`, including the paths to mapping files, choice lists, and other inputs/outputs of the script. 
 - Each subcommand of `data_migrator.py` accepts some command-line arguments, as documented in the script. 
 
+## Implementation details
+- When running `make-import files`, unique IDs are generated for each record in Lyterati based on a hash of the record's metadata (as present in the exported CSV). These become the Elements objects' IDs upon import.
+- These IDs are persisted to `./data/to-migrate/unique-ids.csv` in order to avoid collisions with future imports and to allow for reimporting the same data as necessary. **Note that if the Lyterati data is changed between imports, duplication of objects will occur.** The Lyterati reports do not include unique identifiers.
+- Most of the logic specific to Lyerati, including the specification of the fields, is contained in either `data_migrator.py`, `migration-config.yml`, or in the mapping files themselves. The code in `lyterati_utils`, including `elements_types.py`, is designed to be agnostic with respect to the data source.
+- Tests are in `./tests` and can be run with PyTest: `pytest -rP`.  
+
 
 
 ### Note on this repo
