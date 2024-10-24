@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import date
+from datetime import date, datetime
 import pandas as pd
 from hashlib import sha256
 from .name_parser import AuthorParser, Author
@@ -72,7 +72,9 @@ class LinkType(Enum):
                 return cls.AUTHOR
 
 
-LINK_HEADERS = ['category-1', 'id-1', 'category-2', 'id-2', 'link-type-id']
+LINK_HEADERS = ['category-1', 'id-1', 'category-2', 'id-2', 'link-type-id', 'visible']
+
+PRIVACY_HEADERS = ['privacy', 'lock-privacy']
 
 def normalize(column_str: str) -> str:
     '''Normalizes column names to lower-case, underscore-separated'''
@@ -117,7 +119,8 @@ class ElementsMapping:
                 user_id_field: str,
                 path_to_choice_lists: str=None, 
                 concat_fields: dict[str: list[str]]=None,
-                user_author_mapping: list[str]=None):
+                user_author_mapping: list[str]=None,
+                object_privacy: str=None):
         '''
         Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields. Supply a dictionary for the concat_fields argument if necessary; fields in each list will have their values appended to the fields named as the dictionary keys. The fields names as keys should appear in the Elements mapping, or else they will be ultimately ignored.
         '''
@@ -147,24 +150,29 @@ class ElementsMapping:
         self.concat_fields = { from_field: to_field for to_field, v in concat_fields.items() 
                                     for from_field in v } if concat_fields else None
         self.user_author_mapping = user_author_mapping
+        self.object_privacy = object_privacy
             
     def build_choice_map(self, path_to_choice_lists: str) -> dict[str, dict[str, str]]:
-        '''Expects an Excel file, where each sheet corresponds to an Elements choice field.
-        If the sheet has only one column, the column header is assumed to correspond to an Elements choice field, and the values to be tbe same in the source system and in Elements. If two columns, the second column is assumed to contain values in the source field to be mapped to the choice values in the Elements field. '''
+        '''Expects an Excel file, where each sheet corresponds to an Elements choice field. The sheet name is expected to correspond to the name of the Elements (underlying) choice field.
+        If the sheet has only one column, the column header is ignored, and the values to be tbe same in the source system and in Elements. If two columns, one is expected to have the header "Source System" and to contain values in the source field to be mapped to the choice values in the Elements field. '''
         sheets = pd.read_excel(path_to_choice_lists, engine='openpyxl', sheet_name=None)
         choice_map = {}
         for name, sheet in sheets.items():
-            sheet_dict = sheet.to_dict()
             # Case 1: one column, list to constrain Elements field name
-            # Assume header == the sheet name == the Elements field name
+            # Assume header == "Elements"
             # Maps each possible value to itself
-            if len(sheet_dict) == 1:
-                choice_map[name] = { v: v for v in sheet_dict[name].values() }
-            # Case 2: two columns, assume the first is the Elements field, the second the field in the source system.
+            if len(sheet.columns) == 1:
+                sheet_dict = sheet.to_dict()
+                choice_map[name] = { v: v for v in sheet_dict['Elements'].values() }
+            # Case 2: two columns, assume one named "Elements", the other, "Source System"
             # Assume each value in the source column is present only once (though values in the Elements column map repeat)
-            # Reverse the column order, created a mapping for each column value in 2 to 1
+            # Create a mapping from each Source System column value to the Elements value
             else:
-                choice_map[name] = dict(zip(*reversed([col.values() for col in sheet_dict.values()])))
+                # Drop nulls -- where a value isn't mapped
+                sheet_dict = sheet.dropna().to_dict()
+                # Assume one columne is named "Elements" and there is only one other column
+                other_key = [k for k in sheet_dict.keys() if k != 'Elements'][0]
+                choice_map[name] = dict(zip(*[sheet_dict[other_key].values(), sheet_dict['Elements'].values()]))
         return choice_map
     
     @staticmethod
@@ -208,6 +216,12 @@ class ElementsMapping:
         # Whether to include the user in the person data
         if self.user_author_mapping:
             mapped_row.user_author_mapping = self.user_author_mapping
+        # Whether to make objects (in)visibile
+        if self.object_privacy is not None:
+            # Comma-delimited tuple (from the config file), second value should be a Boolean
+            privacy_settings = self.object_privacy.split(',')
+            privacy_settings[1] = privacy_settings[1].upper()
+            mapped_row.privacy_settings = privacy_settings
         # Add validator for choice fields
         for k in mapped_row.elements_fields:
             if k in self.choice_map:
@@ -269,6 +283,9 @@ class ElementsMetadataRow:
                     yield e_key, getattr(self, f'{e_key}_validator')(value)
                 else:
                     yield e_key, value
+        if hasattr(self, 'privacy_settings'):
+            for key, value in zip(PRIVACY_HEADERS, self.privacy_settings):
+                yield key, value
 
     @property
     def persons(self) -> Iterator[dict[str, str]]:
@@ -290,15 +307,24 @@ class ElementsMetadataRow:
     @property
     def link(self):
         link_type_id = LinkType.from_object(self.category, None).value
+        # 
+        if hasattr(self, 'visibility_setting'):
+            # Expect Boolean
+            visibility_setting = str(self.visibility_setting).upper()
+            return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id, visibility_setting]))
         return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id]))
     
     @staticmethod
     def convert_date(date_str: str, start_date: bool=True) -> str:
         if m := ElementsMetadataRow.is_year.match(str(date_str)):
+            year = int(m.group(1))
             if start_date:
-                return date(int(m.group(1)), 1, 1).strftime('%Y-%m-%d')
-            else:
+                return date(year, 1, 1).strftime('%Y-%m-%d')
+            elif year < datetime.now().year:
                 return date(int(m.group(1)), 12, 31).strftime('%Y-%m-%d')
+            else:
+                # None for end_date when it would be the current year
+                return None 
         elif m := ElementsMetadataRow.is_term.match(date_str):
             year = int(m.group(2))
             term_suffix = '_START' if start_date else '_END'

@@ -170,13 +170,15 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
         minter = ElementsObjectID(path)
     parser = AuthorParser()
     user_author_mapping = CONFIG['user_author_mapping'] if elements_category in CONFIG['user_author_mapping']['included_in'] else None
+    object_privacy = CONFIG.get('object_privacy', {}).get(elements_category)
     mapper = ElementsMapping(path_to_mapping=CONFIG['mapping'][elements_category], 
                              minter=minter,
                              parser=parser,
                              user_id_field=CONFIG['profile_id_field'],
                              path_to_choice_lists=CONFIG['choice_lists'].get(elements_category),
                              concat_fields=concat_fields, 
-                             user_author_mapping=user_author_mapping)
+                             user_author_mapping=user_author_mapping,
+                             object_privacy=object_privacy)
 
     metadata_rows = []
     linking_rows = []
@@ -214,7 +216,7 @@ def make_import_files(data_source, category):
     # Write original with object ID's for cross-reference
     data_source_path = Path(data_source).parents[0]
     file_name = Path(data_source).stem
-    processed[4].to_csv(data_source_path / f'{file_name}_migrated.csv', index=False)
+    processed[3].to_csv(data_source_path / f'{file_name}_migrated.csv', index=False)
 
 
 @cli.command()

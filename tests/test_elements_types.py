@@ -3,6 +3,7 @@ from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, Eleme
 from lyterati_utils.name_parser import AuthorParser
 import pandas as pd
 from tests.rows_fixtures import ACTIVITIES, TEACHING_ACTIVITIES, PUBLICATIONS
+from datetime import datetime
 
 
 @pytest.fixture()
@@ -73,7 +74,7 @@ def teaching_activity_rows(teaching_activity_inputs, teaching_activity_mapping):
 
 @pytest.fixture()
 def publication_mapping(minter, parser):
-    return ElementsMapping('./tests/publication-mapping.csv', minter, parser, user_id_field='gw_id')
+    return ElementsMapping('./tests/publication-mapping.csv', minter, parser, user_id_field='gw_id', object_privacy='internal,false')
 
 @pytest.fixture()
 def publication_rows(publication_inputs, publication_mapping):
@@ -136,6 +137,10 @@ class TestElementsActivityMetadata:
         # Type with both start_date and end_date defined 
         mapped_dict = dict(activity_rows[1])
         assert mapped_dict['start-date'] == '2016-01-01' and mapped_dict['end-date'] == '2016-12-31'
+        # Confirm end-date is null when equal to the current year
+        activity_rows[1].data['contribution_year'] = datetime.now().year
+        mapped_dict = dict(activity_rows[1])
+        assert mapped_dict['end-date'] is None
     
     def test_choice_constraint(self, activity_rows):
         mapped_dict = dict(activity_rows[3])
@@ -207,7 +212,7 @@ class TestElementsPublicationMetadata:
     def test_row_iter(self, publication_rows):
         # Test for source fields mapped to multiple Elements fields
         row_dict = dict(publication_rows[2])
-        assert row_dict == {'id': '4b33df5e', 'category': 'publication', 'type': 'journal-article', 'publication-date': '2019-01-01', 'title': 'Impact of Impact and Impact Assistance on Journal Impact Factor for Academic Tenure', 'journal': 'Journal of Impacts in Pataphysics', 'doi': '10.1080/21551.2019.16221', 'external-identifiers': "'pmid:311244'"}
+        assert row_dict == {'id': '4b33df5e', 'category': 'publication', 'type': 'journal-article', 'publication-date': '2019-01-01', 'title': 'Impact of Impact and Impact Assistance on Journal Impact Factor for Academic Tenure', 'journal': 'Journal of Impacts in Pataphysics', 'doi': '10.1080/21551.2019.16221', 'external-identifiers': "'pmid:311244'", 'lock-privacy': 'FALSE', 'privacy': 'internal' }
     
     def test_persons_iter(self, publication_rows):
         user_author_mapping = { 'fields': ['first_name', 'middle_name', 'last_name'] }
