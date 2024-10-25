@@ -78,7 +78,7 @@ PRIVACY_HEADERS = ['privacy', 'lock-privacy']
 
 def normalize(column_str: str) -> str:
     '''Normalizes column names to lower-case, underscore-separated'''
-    return column_str.lower().replace(' ', '_')
+    return column_str.strip().lower().replace(' ', '_')
 
 class ElementsObjectID:
     '''Class to create unique IDs for objects.'''

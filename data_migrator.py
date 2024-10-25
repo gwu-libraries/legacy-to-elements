@@ -191,7 +191,17 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
             continue
         metadata_rows.append(dict(elements_row))
         linking_rows.append(elements_row.link)
-        persons_rows.extend(list(elements_row.persons))
+        # Temporary hack: skipping author parsing for publications
+        if elements_category == 'publication':
+            user = {k: elements_row.data[k] for k in user_author_mapping['fields'] if not pd.isna(elements_row.data[k]) }
+            persons_rows.append({'category': 'publication', 
+                                 'id': elements_row.id, 
+                                 'field-name': 'authors', 
+                                 'surname': user['last_name'], 
+                                 'first-name': user['first_name'],
+                                 'full': f'{user["first_name"]} {user["last_name"]}'})
+        else:
+            persons_rows.extend(list(elements_row.persons))
         object_ids.append(elements_row.id)
     minter.persist_ids()
     df['elements_id'] = object_ids

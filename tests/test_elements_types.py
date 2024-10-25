@@ -94,15 +94,17 @@ class TestElementsMapping:
     def test_object_mapping(self, activity_mapping):
 
         assert activity_mapping.object_type_map['Committees'] == 'committee-membership'
+        #
     
     def test_field_type_mapping(self, activity_mapping):
 
         assert activity_mapping.field_type_map['c-additional-details'] == 'text'
 
         
-    def test_column_mapping(self, activity_mapping):
+    def test_column_mapping(self, activity_mapping, publication_mapping):
 
         assert activity_mapping.column_map['Media Contributions']['name'] == ['title']
+        print(publication_mapping.column_map['Articles'])
 
 
 class TestLinkType:

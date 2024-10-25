@@ -31,12 +31,13 @@ object_id_store: ./data/to-migrate/unique-ids.csv
 # Decision sheets from Elements mapping exercise, by category
 mapping:
   activity: ./data/to-migrate/mapping/professional-activities-decision_10-23-2024.csv
-  teaching-activity: ./data/to-migrate/mapping/teaching-acitivities-decision_10-08-2024.csv
-  publication: 
+  teaching-activity: ./data/to-migrate/mapping/teaching-acitivities-decision_10-25-2024.csv
+  publication: ./data/to-migrate/mapping/publications-decision_10-24-2024.csv
 # Choice lists: these files map Elements choice items to Lyterati values, or in the case where no mapping is required, they provide a list of choice items
 # Each file should be a spreadsheet containing tabs for each underlying choice field used in that category
 choice_lists:
   activity: "./data/to-migrate/mapping/Professional Actitivies Choice Lists.xlsx"
+  teaching-activity: "./data/to-migrate/mapping/Teaching Activities Choice Lists.xlsx"
 # Fields from the Lyterati reports to concatenate, by category
 # For each category, the fields specified as keys will have their values concatenated with the values of the fields listed in association with those keys
 # Note that the fields correspond to column names in the LYTERATI reports, not Elements fields, since the concatenation is done prior to mapping
