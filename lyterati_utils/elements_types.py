@@ -405,7 +405,7 @@ class ElementsPersonList:
     '''Represents one or more rows of persons (expanded) data for import into Elements'''
     
     def __init__(self, persons: dict[str, str], parser: AuthorParser, user: Optional[dict[str, str]]=None):
-        '''persons should be a mapping from an Elements field of type "person" or "person-list" to a string representing one or more persons. The _id should be the unique identifier of the Elements object associated with these persons. If user is supplied, the name will be added to the parsed list of personal names.'''
+        '''persons should be a mapping from an Elements field of type "person" or "person-list" to a string representing one or more persons. If user is supplied, the name will be added to the parsed list of personal names.'''
         self.parser = parser
         self.persons = persons
         self.user = user
