@@ -52,6 +52,8 @@ concat_fields:
 user_author_mapping:
   fields: ['first_name', 'middle_name', 'last_name']
   included_in: ['publication']
+# Lyterati field that may contain DOI's
+doi_fields: ['url', 'additional_details', 'publication_name']
 # global settings affecting all objects of this type
 # first value is the privacy setting, second is whether the privacy setting is locked for the user
 object_privacy:

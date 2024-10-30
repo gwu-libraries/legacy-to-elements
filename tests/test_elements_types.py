@@ -74,7 +74,7 @@ def teaching_activity_rows(teaching_activity_inputs, teaching_activity_mapping):
 
 @pytest.fixture()
 def publication_mapping(minter, parser):
-    return ElementsMapping('./tests/publication-mapping.csv', minter, parser, user_id_field='gw_id', object_privacy='internal,false')
+    return ElementsMapping('./tests/publication-mapping.csv', minter, parser, user_id_field='gw_id', doi_fields=['url'], object_privacy='internal,false')
 
 @pytest.fixture()
 def publication_rows(publication_inputs, publication_mapping):
@@ -104,8 +104,6 @@ class TestElementsMapping:
     def test_column_mapping(self, activity_mapping, publication_mapping):
 
         assert activity_mapping.column_map['Media Contributions']['name'] == ['title']
-        print(publication_mapping.column_map['Articles'])
-
 
 class TestLinkType:
 
@@ -214,7 +212,7 @@ class TestElementsPublicationMetadata:
     def test_row_iter(self, publication_rows):
         # Test for source fields mapped to multiple Elements fields
         row_dict = dict(publication_rows[2])
-        assert row_dict == {'id': '4b33df5e', 'category': 'publication', 'type': 'journal-article', 'publication-date': '2019-01-01', 'title': 'Impact of Impact and Impact Assistance on Journal Impact Factor for Academic Tenure', 'journal': 'Journal of Impacts in Pataphysics', 'doi': '10.1080/21551.2019.16221', 'external-identifiers': "'pmid:311244'", 'lock-privacy': 'FALSE', 'privacy': 'internal' }
+        assert row_dict == {'id': '4b33df5e', 'category': 'publication', 'type': 'journal-article', 'publication-date': '2019-01-01', 'title': 'Impact of Impact and Impact Assistance on Journal Impact Factor for Academic Tenure', 'journal': 'Journal of Impacts in Pataphysics', 'doi': '10.1080/21551.2019.16221', 'external-identifiers': "'pubmed:311244'", 'lock-privacy': 'FALSE', 'privacy': 'internal', 'medium': 'Refereed Article' }
     
     def test_persons_iter(self, publication_rows):
         user_author_mapping = { 'fields': ['first_name', 'middle_name', 'last_name'] }

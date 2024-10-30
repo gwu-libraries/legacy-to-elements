@@ -10,6 +10,7 @@ from functools import partial
 from enum import Enum
 from .doi_parser import Parser
 import warnings
+import unicodedata
 
 
 class TermDates(Enum):
@@ -120,6 +121,7 @@ class ElementsMapping:
                 path_to_choice_lists: str=None, 
                 concat_fields: dict[str: list[str]]=None,
                 user_author_mapping: list[str]=None,
+                doi_fields: list[str]=None,
                 object_privacy: str=None):
         '''
         Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields. Supply a dictionary for the concat_fields argument if necessary; fields in each list will have their values appended to the fields named as the dictionary keys. The fields names as keys should appear in the Elements mapping, or else they will be ultimately ignored.
@@ -149,6 +151,7 @@ class ElementsMapping:
         # Fields to concatenate in the source system for matching to a single Elements field
         self.concat_fields = { from_field: to_field for to_field, v in concat_fields.items() 
                                     for from_field in v } if concat_fields else None
+        self.doi_fields = doi_fields
         self.user_author_mapping = user_author_mapping
         self.object_privacy = object_privacy
             
@@ -216,6 +219,9 @@ class ElementsMapping:
         # Whether to include the user in the person data
         if self.user_author_mapping:
             mapped_row.user_author_mapping = self.user_author_mapping
+        # Whether to map DOI's
+        if self.doi_fields:
+            mapped_row.doi_fields = self.doi_fields
         # Whether to make objects (in)visibile
         if self.object_privacy is not None:
             # Comma-delimited tuple (from the config file), second value should be a Boolean
@@ -269,6 +275,10 @@ class ElementsMetadataRow:
             # Skip NaN's
             if pd.isna(value) or (not value):
                 continue
+            if isinstance(value, str):
+                # Fix bad strings, including form-feed characters
+                value = Parser.clean_xl_text(value, False).encode('utf8').decode()
+                value = unicodedata.normalize('NFKD', value).replace('\x0b', ' ')
             # Map field name to Elements
             # There may be more than one Elements field to be derived
             for e_key in self.fields_from_source.get(key, []):
@@ -339,7 +349,10 @@ class ElementsMetadataRow:
         source_key = self.elements_fields['doi']
         doi = Parser.extract_doi(self.data[source_key])
         if not doi:
-            return Parser.extract_doi(self.data.get('url', ''), is_url=True)
+            for field in self.doi_fields:
+                doi = Parser.extract_doi(self.data.get(field, ''), is_url=True)
+                if doi:
+                    break
         return doi
 
 
@@ -397,7 +410,7 @@ class ElementsMetadataRow:
             url_ids = Parser.extract_pmids(self.data.get('url', ''), is_url=True)
             # Consolidate non-null values
             ids = [ _id if _id else url_ids[i] for i, _id in enumerate(ids) ]
-        ids = dict(zip(('pmid', 'pmc'), ids))
+        ids = dict(zip(('pubmed', 'pmc'), ids))
         return ';'.join([ f"'{key}:{value}'" for key, value in ids.items() if value ])
         
 

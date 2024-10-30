@@ -171,6 +171,7 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
     parser = AuthorParser()
     user_author_mapping = CONFIG['user_author_mapping'] if elements_category in CONFIG['user_author_mapping']['included_in'] else None
     object_privacy = CONFIG.get('object_privacy', {}).get(elements_category)
+    doi_fields = CONFIG['doi_fields'] if elements_category == 'publication' else None
     mapper = ElementsMapping(path_to_mapping=CONFIG['mapping'][elements_category], 
                              minter=minter,
                              parser=parser,
@@ -178,6 +179,7 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
                              path_to_choice_lists=CONFIG['choice_lists'].get(elements_category),
                              concat_fields=concat_fields, 
                              user_author_mapping=user_author_mapping,
+                             doi_fields=doi_fields,
                              object_privacy=object_privacy)
 
     metadata_rows = []
@@ -192,15 +194,7 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
         metadata_rows.append(dict(elements_row))
         linking_rows.append(elements_row.link)
         # Temporary hack: skipping author parsing for publications
-        if elements_category == 'publication':
-            user = {k: elements_row.data[k] for k in user_author_mapping['fields'] if not pd.isna(elements_row.data[k]) }
-            persons_rows.append({'category': 'publication', 
-                                 'id': elements_row.id, 
-                                 'field-name': 'authors', 
-                                 'surname': user['last_name'], 
-                                 'first-name': user['first_name'],
-                                 'full': f'{user["first_name"]} {user["last_name"]}'})
-        else:
+        if elements_category != 'publication':
             persons_rows.extend(list(elements_row.persons))
         object_ids.append(elements_row.id)
     minter.persist_ids()
@@ -220,9 +214,10 @@ def make_import_files(data_source, category):
     category = SourceHeading[category.upper()]
     processed = process_for_elements(data, category)
     for name, output in zip(['metadata', 'linking', 'persons'], processed[:3]):
-        df = pd.DataFrame.from_records(output)
-        label = {'publication': 'publications', 'activity': 'activities', 'teaching-activity': 'teaching-activities'}.get(category.category)
-        df.to_csv(output_dir / f'{label}-{name}.csv', index=False)
+        if output:
+            df = pd.DataFrame.from_records(output)
+            label = {'publication': 'publications', 'activity': 'activities', 'teaching-activity': 'teaching-activities'}.get(category.category)
+            df.to_csv(output_dir / f'{label}-{name}.csv', index=False)
     # Write original with object ID's for cross-reference
     data_source_path = Path(data_source).parents[0]
     file_name = Path(data_source).stem
