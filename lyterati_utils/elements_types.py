@@ -317,12 +317,15 @@ class ElementsMetadataRow:
     @property
     def link(self):
         link_type_id = LinkType.from_object(self.category, None).value
-        # 
         if hasattr(self, 'visibility_setting'):
             # Expect Boolean
-            visibility_setting = str(self.visibility_setting).upper()
-            return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id, visibility_setting]))
-        return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id]))
+            visibility_setting = [str(self.visibility_setting).upper()]
+        else:
+            visibility_setting = []
+        if self.category == 'teaching-activity':
+            return dict(zip(LINK_HEADERS, [ 'user', self.data[self.user_id_field], self.category, self.id, link_type_id] +  visibility_setting))
+        return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id] + visibility_setting))
+        
     
     @staticmethod
     def convert_date(date_str: str, start_date: bool=True) -> str:
@@ -355,6 +358,9 @@ class ElementsMetadataRow:
                     break
         return doi
 
+    @property
+    def supervisory_role(self):
+        return 'Advisor'
 
     @property
     def start_date(self):

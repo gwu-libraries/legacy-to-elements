@@ -198,9 +198,9 @@ class TestElementsTeachingActivityMetadata:
     def test_link_creation(self, teaching_activity_rows):
         link_row = teaching_activity_rows[0].link
         assert link_row['link-type-id'] == 83
-        assert link_row['id-2'] == 'G999999996'
-        assert link_row['id-1'] == 'e40ea606'
-        assert link_row['category-1'] == 'teaching-activity'
+        assert link_row['id-2'] == 'e40ea606'
+        assert link_row['id-1'] == 'G999999996'
+        assert link_row['category-2'] == 'teaching-activity'
 
 class TestElementsPublicationMetadata:
 
