@@ -238,7 +238,7 @@ class ElementsMetadataRow:
     '''Represents a single row for import data for Elements'''
     # Fields for which we want @property access, because we want to apply some formatting or type constraints
     # Note that these field names use hyphens, not underscores, to match the Elements fields
-    properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13', 'publication-date', 'external-identifiers']
+    properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13', 'publication-date', 'external-identifiers', 'supervisory-role']
 
     is_year = re.compile(r'((?:19|20)\d{2})(\.0)?')
     is_term = re.compile(r'(Spring|Fall|Summer) ((?:19|20)\d{2})')
