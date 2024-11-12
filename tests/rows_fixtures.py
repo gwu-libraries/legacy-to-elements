@@ -86,7 +86,22 @@ TEACHING_ACTIVITIES = [ {'college_name': 'School of Business',
                         'category': 'Teaching',
                         'middle_name': 'I',
                         'gw_id': 'G999999996'
-                        }
+                        },
+                        {'college_name': 'School of Business',
+                        'department_name': 'Accountancy',
+                        'last_name': 'Hang',
+                        'first_name': 'Hok-Hyon',
+                        'degree_type': 'Doctoral',
+                        'start_term': 'Summer 2014',
+                        'end_term': 'Ongoing',
+                        'role': pd.NA,
+                        'placement_type': pd.NA,
+                        'additional_details': pd.NA,
+                        'school_code': 'GWSB',
+                        'report_code': 'Research Supervision',
+                        'category': 'Teaching',
+                        'middle_name': pd.NA,
+                        'gw_id': 'G11111111'}
                     ]
 
 PUBLICATIONS = [ {'college_name': 'School of Engin & App Sc',

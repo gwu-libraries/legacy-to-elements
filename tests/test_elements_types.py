@@ -188,12 +188,14 @@ class TestElementsTeachingActivityMetadata:
         assert teaching_activity_rows[0].data['role'] == 'Faculty mentor'
         assert teaching_activity_rows[0].start_date == '2021-09-01'
         assert teaching_activity_rows[0].end_date == '2022-05-31'
+        assert teaching_activity_rows[1].end_date == '2014-12-31'
     
     def test_row_iter(self, teaching_activity_rows):
         #  Test for properly concatenated fields
         row_dict = dict(teaching_activity_rows[0])
         assert row_dict['c-additional-details'].startswith('During 2022 I mentored an accounting student')
         assert row_dict['c-additional-details'].endswith('(Legacy) Role: Faculty mentor\n\n(Legacy) Degree Type: Undergraduate')
+        assert row_dict['supervisory-role'] == 'Advisor'
 
     def test_link_creation(self, teaching_activity_rows):
         link_row = teaching_activity_rows[0].link

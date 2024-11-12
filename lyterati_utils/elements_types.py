@@ -239,6 +239,7 @@ class ElementsMetadataRow:
     # Fields for which we want @property access, because we want to apply some formatting or type constraints
     # Note that these field names use hyphens, not underscores, to match the Elements fields
     properties = ['doi', 'start-date', 'end-date', 'department', 'institution', 'isbn-13', 'publication-date', 'external-identifiers', 'supervisory-role']
+    non_null_fields = ['supervisory-role', 'end-date']
 
     is_year = re.compile(r'((?:19|20)\d{2})(\.0)?')
     is_term = re.compile(r'(Spring|Fall|Summer) ((?:19|20)\d{2})')
@@ -272,9 +273,6 @@ class ElementsMetadataRow:
         self._concatenate_fields()
         # Other fields from the source system
         for key, value in self.data.items():
-            # Skip NaN's
-            if pd.isna(value) or (not value):
-                continue
             if isinstance(value, str):
                 # Fix bad strings, including form-feed characters
                 value = Parser.clean_xl_text(value, False).encode('utf8').decode()
@@ -282,6 +280,9 @@ class ElementsMetadataRow:
             # Map field name to Elements
             # There may be more than one Elements field to be derived
             for e_key in self.fields_from_source.get(key, []):
+                # Skip NaN's, unless a non-nullable field (in which case all instances must have some value or a default value)
+                if (pd.isna(value) or (not value)) and (e_key not in self.non_null_fields):
+                    continue
                 # Person field: extract separately
                 if e_key in self.person_fields:
                     self._persons[e_key] = value
@@ -328,7 +329,7 @@ class ElementsMetadataRow:
         
     
     @staticmethod
-    def convert_date(date_str: str, start_date: bool=True) -> str:
+    def convert_date(date_str: str, start_date: bool=True, year_end: bool=False) -> str:
         if m := ElementsMetadataRow.is_year.match(str(date_str)):
             year = int(m.group(1))
             if start_date:
@@ -341,6 +342,8 @@ class ElementsMetadataRow:
         elif m := ElementsMetadataRow.is_term.match(date_str):
             year = int(m.group(2))
             term_suffix = '_START' if start_date else '_END'
+            if year_end and year < datetime.now().year:
+                return date(year, 12, 31).strftime('%Y-%m-%d')
             return date(year, *TermDates[m.group(1).upper() + term_suffix].value).strftime('%Y-%m-%d')
         else:
             warnings.warn(f'Unable to covert date string {date_str}. Skipping it.') 
@@ -375,6 +378,12 @@ class ElementsMetadataRow:
     @property
     def end_date(self):
         source_key = self.elements_fields['end-date']
+        # If there's no end date listed, but there is a start date, and if the start year is earlier than the current year, we want to return the end of the start year
+        if (not self.data[source_key]) or pd.isna(self.data[source_key]) or (self.data[source_key] in ['Ongoing', 'Term not Known']):
+            start_date_key = self.elements_fields['start-date']
+            if not self.data[start_date_key] or pd.isna(self.data[start_date_key]):
+                return
+            return ElementsMetadataRow.convert_date(self.data[start_date_key], start_date=False, year_end=True)
         return ElementsMetadataRow.convert_date(self.data[source_key], False)
     
     @property
