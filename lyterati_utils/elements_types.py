@@ -122,7 +122,8 @@ class ElementsMapping:
                 concat_fields: dict[str: list[str]]=None,
                 user_author_mapping: list[str]=None,
                 doi_fields: list[str]=None,
-                object_privacy: str=None):
+                object_privacy: str=None,
+                blank_end_dates: bool=False):
         '''
         Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields. Supply a dictionary for the concat_fields argument if necessary; fields in each list will have their values appended to the fields named as the dictionary keys. The fields names as keys should appear in the Elements mapping, or else they will be ultimately ignored.
         '''
@@ -154,6 +155,7 @@ class ElementsMapping:
         self.doi_fields = doi_fields
         self.user_author_mapping = user_author_mapping
         self.object_privacy = object_privacy
+        self.blank_end_dates = blank_end_dates
             
     def build_choice_map(self, path_to_choice_lists: str) -> dict[str, dict[str, str]]:
         '''Expects an Excel file, where each sheet corresponds to an Elements choice field. The sheet name is expected to correspond to the name of the Elements (underlying) choice field.
@@ -222,6 +224,8 @@ class ElementsMapping:
         # Whether to map DOI's
         if self.doi_fields:
             mapped_row.doi_fields = self.doi_fields
+        # How to handle missing end dates
+        mapped_row.blank_end_dates = self.blank_end_dates
         # Whether to make objects (in)visibile
         if self.object_privacy is not None:
             # Comma-delimited tuple (from the config file), second value should be a Boolean
@@ -277,6 +281,7 @@ class ElementsMetadataRow:
                 # Fix bad strings, including form-feed characters
                 value = Parser.clean_xl_text(value, False).encode('utf8').decode()
                 value = unicodedata.normalize('NFKD', value).replace('\x0b', ' ')
+                value = value.replace('Â', '')
             # Map field name to Elements
             # There may be more than one Elements field to be derived
             for e_key in self.fields_from_source.get(key, []):
@@ -377,6 +382,8 @@ class ElementsMetadataRow:
     
     @property
     def end_date(self):
+        if self.blank_end_dates:
+            return
         source_key = self.elements_fields['end-date']
         # If there's no end date listed, but there is a start date, and if the start year is earlier than the current year, we want to return the end of the start year
         if (not self.data[source_key]) or pd.isna(self.data[source_key]) or (self.data[source_key] in ['Ongoing', 'Term not Known']):

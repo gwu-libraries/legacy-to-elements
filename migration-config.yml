@@ -54,6 +54,8 @@ user_author_mapping:
   included_in: ['publication']
 # Lyterati field that may contain DOI's
 doi_fields: ['url', 'additional_details', 'publication_name']
+# Whether to leave end-dates blank -- this may be desirable in cases where the end-date is not provided in the source system
+blank_end_dates: true
 # global settings affecting all objects of this type
 # first value is the privacy setting, second is whether the privacy setting is locked for the user
 object_privacy:
