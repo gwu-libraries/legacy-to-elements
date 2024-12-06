@@ -122,8 +122,8 @@ class ElementsMapping:
                 concat_fields: dict[str: list[str]]=None,
                 user_author_mapping: list[str]=None,
                 doi_fields: list[str]=None,
-                object_privacy: str=None,
-                blank_end_dates: bool=False):
+                end_year_min: str=None,
+                object_privacy: str=None):
         '''
         Loads a column mapping from a CSV file at path_to_mapping, and optionally, a mapping of Lyerati values to Elements values for Elements choice fields. Supply a dictionary for the concat_fields argument if necessary; fields in each list will have their values appended to the fields named as the dictionary keys. The fields names as keys should appear in the Elements mapping, or else they will be ultimately ignored.
         '''
@@ -153,9 +153,9 @@ class ElementsMapping:
         self.concat_fields = { from_field: to_field for to_field, v in concat_fields.items() 
                                     for from_field in v } if concat_fields else None
         self.doi_fields = doi_fields
+        self.end_year_min = end_year_min
         self.user_author_mapping = user_author_mapping
         self.object_privacy = object_privacy
-        self.blank_end_dates = blank_end_dates
             
     def build_choice_map(self, path_to_choice_lists: str) -> dict[str, dict[str, str]]:
         '''Expects an Excel file, where each sheet corresponds to an Elements choice field. The sheet name is expected to correspond to the name of the Elements (underlying) choice field.
@@ -224,9 +224,8 @@ class ElementsMapping:
         # Whether to map DOI's
         if self.doi_fields:
             mapped_row.doi_fields = self.doi_fields
-        # How to handle missing end dates
-        mapped_row.blank_end_dates = self.blank_end_dates
         # Whether to make objects (in)visibile
+        mapped_row.end_year_min = int(self.end_year_min)
         if self.object_privacy is not None:
             # Comma-delimited tuple (from the config file), second value should be a Boolean
             privacy_settings = self.object_privacy.split(',')
@@ -333,14 +332,13 @@ class ElementsMetadataRow:
         return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id] + visibility_setting))
         
     
-    @staticmethod
-    def convert_date(date_str: str, start_date: bool=True, year_end: bool=False) -> str:
+    def convert_date(self, date_str: str, start_date: bool=True, year_end: bool=False) -> str:
         if m := ElementsMetadataRow.is_year.match(str(date_str)):
             year = int(m.group(1))
             if start_date:
                 return date(year, 1, 1).strftime('%Y-%m-%d')
-            elif year < datetime.now().year:
-                return date(int(m.group(1)), 12, 31).strftime('%Y-%m-%d')
+            elif self.end_year_min and (year < self.end_year_min):
+                return date(year, 12, 31).strftime('%Y-%m-%d')
             else:
                 # None for end_date when it would be the current year
                 return None 
@@ -373,25 +371,23 @@ class ElementsMetadataRow:
     @property
     def start_date(self):
         source_key = self.elements_fields['start-date']
-        return ElementsMetadataRow.convert_date(self.data[source_key])
+        return self.convert_date(self.data[source_key])
 
     @property
     def publication_date(self):
         source_key = self.elements_fields['publication-date']
-        return ElementsMetadataRow.convert_date(self.data[source_key])
+        return self.convert_date(self.data[source_key])
     
     @property
     def end_date(self):
-        if self.blank_end_dates:
-            return
         source_key = self.elements_fields['end-date']
         # If there's no end date listed, but there is a start date, and if the start year is earlier than the current year, we want to return the end of the start year
         if (not self.data[source_key]) or pd.isna(self.data[source_key]) or (self.data[source_key] in ['Ongoing', 'Term not Known']):
             start_date_key = self.elements_fields['start-date']
             if not self.data[start_date_key] or pd.isna(self.data[start_date_key]):
                 return
-            return ElementsMetadataRow.convert_date(self.data[start_date_key], start_date=False, year_end=True)
-        return ElementsMetadataRow.convert_date(self.data[source_key], False)
+            return self.convert_date(self.data[start_date_key], start_date=False, year_end=True)
+        return self.convert_date(self.data[source_key], False)
     
     @property
     def institution(self):

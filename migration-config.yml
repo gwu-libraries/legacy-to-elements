@@ -30,7 +30,7 @@ output_dir: ./data/to-migrate/sftp
 object_id_store: ./data/to-migrate/unique-ids.csv
 # Decision sheets from Elements mapping exercise, by category
 mapping:
-  activity: ./data/to-migrate/mapping/professional-activities-decision_10-23-2024.csv
+  activity: ./data/to-migrate/mapping/professional-activities-decision_12-05-2024.csv
   teaching-activity: ./data/to-migrate/mapping/teaching-acitivities-decision_10-25-2024.csv
   publication: ./data/to-migrate/mapping/publications-decision_10-24-2024.csv
 # Choice lists: these files map Elements choice items to Lyterati values, or in the case where no mapping is required, they provide a list of choice items
@@ -54,8 +54,9 @@ user_author_mapping:
   included_in: ['publication']
 # Lyterati field that may contain DOI's
 doi_fields: ['url', 'additional_details', 'publication_name']
-# Whether to leave end-dates blank -- this may be desirable in cases where the end-date is not provided in the source system
-blank_end_dates: true
+# Minium end date -- for end-date field values that are blank when the end-date underlying field is specified on the mapping for an object type
+# This will be computed as the end of the given year
+end_year_min: 2019
 # global settings affecting all objects of this type
 # first value is the privacy setting, second is whether the privacy setting is locked for the user
 object_privacy:

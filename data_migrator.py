@@ -172,7 +172,6 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
     user_author_mapping = CONFIG['user_author_mapping'] if elements_category in CONFIG['user_author_mapping']['included_in'] else None
     object_privacy = CONFIG.get('object_privacy', {}).get(elements_category)
     doi_fields = CONFIG['doi_fields'] if elements_category == 'publication' else None
-    blank_end_dates = CONFIG['blank_end_dates']
     mapper = ElementsMapping(path_to_mapping=CONFIG['mapping'][elements_category], 
                              minter=minter,
                              parser=parser,
@@ -181,8 +180,8 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
                              concat_fields=concat_fields, 
                              user_author_mapping=user_author_mapping,
                              doi_fields=doi_fields,
-                             object_privacy=object_privacy,
-                             blank_end_dates=blank_end_dates)
+                             end_year_min=CONFIG['end_year_min'],
+                             object_privacy=object_privacy)
 
     metadata_rows = []
     linking_rows = []
