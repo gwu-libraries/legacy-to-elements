@@ -221,11 +221,11 @@ class ElementsMapping:
         # Whether to include the user in the person data
         if self.user_author_mapping:
             mapped_row.user_author_mapping = self.user_author_mapping
+        mapped_row.end_year_min = int(self.end_year_min) if self.end_year_min else None
         # Whether to map DOI's
         if self.doi_fields:
             mapped_row.doi_fields = self.doi_fields
         # Whether to make objects (in)visibile
-        mapped_row.end_year_min = int(self.end_year_min)
         if self.object_privacy is not None:
             # Comma-delimited tuple (from the config file), second value should be a Boolean
             privacy_settings = self.object_privacy.split(',')

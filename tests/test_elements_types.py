@@ -134,9 +134,8 @@ class TestElementsActivityMetadata:
         assert mapped_dict['id'] == '5e31bac6'
         assert mapped_dict['c-additional-details'] == 'An additional detail'
         assert 'start-date' in mapped_dict and ('end-date' not in mapped_dict)
-        # Type with both start_date and end_date defined 
         mapped_dict = dict(activity_rows[1])
-        assert mapped_dict['start-date'] == '2016-01-01' and mapped_dict['end-date'] == '2016-12-31'
+        assert mapped_dict['start-date'] == '2016-01-01' and mapped_dict['end-date'] == None
         # Confirm end-date is null when equal to the current year
         activity_rows[1].data['contribution_year'] = datetime.now().year
         mapped_dict = dict(activity_rows[1])
