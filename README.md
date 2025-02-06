@@ -1,4 +1,4 @@
-# Code for migrating Lyterati data to Elements
+# Code for migrating legacy data to Elements
 
 The purpose of the scripts in this repo is to prepare Lyterati data for import into Elements, using the Elements mapping tool. 
 
