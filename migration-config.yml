@@ -3,7 +3,8 @@
 # This file is used to match rows from the various Lyterati service/teaching/research reports with their user IDs for import into Elements
 id_source: ./data/lyterati-xml/expert-finder-feed/fis_faculty.xml
 # Field name in the XML that corresponds to the unique user ID
-profile_id_field: gw_id
+#profile_id_field: gw_id Phase 1
+profile_id_field: faculty_id # Phase 2
 # Field names to extract from the XML
 profile_fields: 
  - first_name
@@ -11,7 +12,7 @@ profile_fields:
  - last_name
  - home_college
  - home_department
- - gw_id
+ - faculty_id
 # Mapping from XML profile to Lyterati reporting column names
 profile_field_map:
   home_college: college_name
@@ -30,9 +31,9 @@ output_dir: ./data/to-migrate/sftp
 object_id_store: ./data/to-migrate/unique-ids.csv
 # Decision sheets from Elements mapping exercise, by category
 mapping:
-  activity: ./data/to-migrate/mapping/professional-activities-decision_12-05-2024.csv
+  activity: ./data/to-migrate/mapping/professional-activities-decision_07-03-2025.csv
   teaching-activity: ./data/to-migrate/mapping/teaching-acitivities-decision_10-25-2024.csv
-  publication: ./data/to-migrate/mapping/publications-decision_10-24-2024.csv
+  publication: ./data/to-migrate/mapping/publications-decision_07-03-2025.csv
 # Choice lists: these files map Elements choice items to Lyterati values, or in the case where no mapping is required, they provide a list of choice items
 # Each file should be a spreadsheet containing tabs for each underlying choice field used in that category
 choice_lists:
@@ -62,4 +63,4 @@ end_year_min: 2019
 object_privacy:
   activity: internal,false
   publication: internal,false
-  teaching-activity: internal,false
+  teaching-activity: private,false

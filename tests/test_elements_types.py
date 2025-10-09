@@ -78,7 +78,7 @@ def publication_mapping(minter, parser):
 
 @pytest.fixture()
 def publication_rows(publication_inputs, publication_mapping):
-    return [ publication_mapping.make_mapped_row(_input, SourceHeading.RESEARCH) for _input in publication_inputs[:3] ]
+    return [ publication_mapping.make_mapped_row(_input, SourceHeading.RESEARCH) for _input in publication_inputs ]
 
 @pytest.fixture()
 def person_without_user(parser):
@@ -125,7 +125,7 @@ class TestElementsActivityMetadata:
         
         assert activity_rows[0].data['additional_details'] == 'An additional detail'
         assert activity_rows[0].start_date == '2023-01-01'
-        assert activity_rows[1].elements_fields == {'title': 'name', 'start-date': 'contribution_year', 'end-date': 'contribution_year', 'url': 'url', 'c-additional-details': 'additional_details'}
+        assert activity_rows[1].elements_fields == {'title': 'name', 'start-date': 'contribution_year', 'end-date': 'end_year', 'url': 'url', 'c-additional-details': 'additional_details'}
 
     def test_activity_rows_iter(self, activity_rows):
         mapped_dict = dict(activity_rows[0])
@@ -179,6 +179,21 @@ class TestElementsActivityMetadata:
 
     def test_single_person_to_parse(self, single_person_without_user):
         assert list(single_person_without_user) == [{'first-name': 'Maribelle', 'surname': 'Merriweather', 'full': 'Maribelle Merriweather', 'field-name': 'co-contributors'}]
+
+    def test_date_logic(self, activity_rows):
+        # Start and end dates should use date components as available
+        assert activity_rows[-1].start_date == '2019-07-01'
+        assert activity_rows[-1].end_date == '2022-12-31'
+        # If date components are null, should return a date for the beginning of the year
+        activity_rows[-1].data['start_month'] = pd.NA
+        activity_rows[-1].data['start_day'] = pd.NA
+        assert activity_rows[-1].start_date == '2019-01-01'
+        # Where the end_year is earlier than the start_year, return null
+        activity_rows[-1].data['end_year'] = 1900
+        assert activity_rows[-1].end_date == None
+        # Where the end_year is null, return null
+        activity_rows[-1].data['end_year'] = pd.NA
+        assert activity_rows[-1].end_date == None
 
         
 class TestElementsTeachingActivityMetadata:
@@ -234,3 +249,14 @@ class TestElementsPublicationMetadata:
         with pytest.warns():
             row = publication_mapping.make_mapped_row(publication_inputs[3], SourceHeading.RESEARCH)
         assert row is None
+    
+    def test_many_to_one_mapping(self, publication_rows):
+        # Testing two different source types mapped to the same Elements type
+        monograph = publication_rows[4]
+        edited = publication_rows[5]
+        assert dict(monograph).get('title') == 'A Monograph'
+        assert dict(edited).get('title') == 'An Edited Volume'
+        assert monograph.link['link-type-id'] == 8
+        assert edited.link['link-type-id'] == 9
+        assert all([person['field-name'] == 'authors' for person in monograph.persons])
+        assert all([person['field-name'] == 'editors' for person in edited.persons])

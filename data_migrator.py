@@ -13,6 +13,7 @@ from lyterati_utils.name_parser import AuthorParser
 import re
 from lyterati_utils.elements_types import SourceHeading, ElementsObjectID, ElementsMapping
 import yaml
+from tqdm import tqdm
 
 
 logger = logging.getLogger(__name__)
@@ -109,7 +110,7 @@ def generate_stats(reports: DataFrame, path_to_save_stats: str, category: str=No
     grouped = reports.groupby('school_code')
     def apply_stats(df):
         df['unique_id'] = df.first_name + df.last_name + df.department_name
-        df['missing_users'] = len(df.unique_id.unique()) - len(df.gw_id.unique())
+        df['missing_users'] = len(df.unique_id.unique()) - len(df.faculty_id.unique())
         df['unique_users'] = len(df.unique_id.unique())
         return df.groupby(['missing_users', 'unique_users', 'report_code']).college_name.count()
     stats_df = grouped.apply(apply_stats).unstack()
@@ -187,16 +188,14 @@ def process_for_elements(df: DataFrame, category: str) -> list[Union[list[dict[s
     linking_rows = []
     persons_rows = []
     object_ids = []
-    for row in df.itertuples(index=False):
+    for row in tqdm(df.itertuples(index=False)):
         elements_row = mapper.make_mapped_row(row, map_type=category)
         if not elements_row:
             object_ids.append(None)
             continue
         metadata_rows.append(dict(elements_row))
         linking_rows.append(elements_row.link)
-        # Temporary hack: skipping author parsing for publications
-        if elements_category != 'publication':
-            persons_rows.extend(list(elements_row.persons))
+        persons_rows.extend(list(elements_row.persons))
         object_ids.append(elements_row.id)
     minter.persist_ids()
     df['elements_id'] = object_ids
@@ -237,15 +236,17 @@ def add_missing_ids(id_source, data_source):
 @cli.command()
 @click.option('--data-source', default='./data/lyterati-exports') # Should be a folder containing one or more CSV files, which will be aggregated and split according to the top-level categories in Lyterati (research, service, teaching)
 @click.option('--target', default='./data/to-migrate') 
+@click.option('--no-ids', is_flag=True)  # pass flag to skip ID matching (if the files already contain the ID's)
 @click.option('--exclude', '-e', multiple=True) # One or more Lyterati record types to exclude, such as Grants or Work in Progress
-def prep_lyterati_reports(data_source, target, exclude):
+def prep_lyterati_reports(data_source, target, no_ids, exclude):
     '''Values passed to --exclude/-e should correspond to the part of the filename designating either a school or a type of report. For instance, -e grants will exclude all files with "grants" or "Grants" in the title. Matching is case-insensitive.'''
-    ids = load_ids_from_profiles()
     reports = load_reports(data_source, exclude=exclude)
     if reports.empty:
         logger.error('Unable to finish processing reports. Please fix the errors flagged in the log.')
         exit()    
-    reports = merge_ids_with_reports(reports, ids)
+    if not no_ids:
+        ids = load_ids_from_profiles()
+        reports = merge_ids_with_reports(reports, ids)
     save_reports(reports, target)
 
 if __name__ == '__main__':

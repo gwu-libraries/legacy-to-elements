@@ -101,7 +101,7 @@ class AuthorParser:
         :param pre_clean: whether to perform pre-parsing steps on the string (removes extraneous punctuation, title cases words in all caps, etc.)
         '''
 
-        self.parser = Lark(AUTHOR_GRAMMAR, start='authors', ambiguity='explicit', regex=True)
+        self.parser = Lark(AUTHOR_GRAMMAR, start='authors', ambiguity='resolve', regex=True)
         self.errors = []
         self.parsed = []
         self.corp_auth = set(CORPORATE_AUTHOR_WORDS)
@@ -168,7 +168,7 @@ class AuthorParser:
             names = self._pre_clean(names)
         try:
             tree = self.parser.parse(names.strip())
-            tree = RemoveAmbiguities().transform(tree)
+            #tree = RemoveAmbiguities().transform(tree)
             return Author.unpack_tree(tree), None
         except (UnexpectedCharacters, UnexpectedEOF) as e:
             return None, { 'error': str(e) }

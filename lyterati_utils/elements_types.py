@@ -11,7 +11,7 @@ from enum import Enum
 from .doi_parser import Parser
 import warnings
 import unicodedata
-
+from calendar import monthrange
 
 class TermDates(Enum):
     '''Month and day for date of term'''
@@ -71,6 +71,8 @@ class LinkType(Enum):
                 return cls.TEACHING
             case ('publication', None):
                 return cls.AUTHOR
+            case ('publication', 'Scholarly Editorships'):
+                return cls.EDITOR
 
 
 LINK_HEADERS = ['category-1', 'id-1', 'category-2', 'id-2', 'link-type-id', 'visible']
@@ -80,6 +82,13 @@ PRIVACY_HEADERS = ['privacy', 'lock-privacy']
 def normalize(column_str: str) -> str:
     '''Normalizes column names to lower-case, underscore-separated'''
     return column_str.strip().lower().replace(' ', '_')
+
+
+def as_none(value):
+    '''If value is NaN, return None. Otherwise, return value.'''
+    if pd.isna(value):
+        return None
+    return value
 
 class ElementsObjectID:
     '''Class to create unique IDs for objects.'''
@@ -321,7 +330,11 @@ class ElementsMetadataRow:
     
     @property
     def link(self):
-        link_type_id = LinkType.from_object(self.category, None).value
+        # Hack to support edited volumes being mapped to the same Elements type as monographs
+        if as_none(self.data.get('heading_type')) and self.data.get('heading_type', '').startswith('Scholarly Editorships'):
+            link_type_id = LinkType.from_object(self.category, 'Scholarly Editorships').value
+        else:
+            link_type_id = LinkType.from_object(self.category, None).value
         if hasattr(self, 'visibility_setting'):
             # Expect Boolean
             visibility_setting = [str(self.visibility_setting).upper()]
@@ -331,25 +344,26 @@ class ElementsMetadataRow:
             return dict(zip(LINK_HEADERS, [ 'user', self.data[self.user_id_field], self.category, self.id, link_type_id] +  visibility_setting))
         return dict(zip(LINK_HEADERS, [self.category, self.id, 'user', self.data[self.user_id_field], link_type_id] + visibility_setting))
         
-    
+
     def convert_date(self, date_str: str, start_date: bool=True, year_end: bool=False) -> str:
         if m := ElementsMetadataRow.is_year.match(str(date_str)):
             year = int(m.group(1))
-            if start_date:
-                return date(year, 1, 1).strftime('%Y-%m-%d')
-            elif self.end_year_min and (year < self.end_year_min):
-                return date(year, 12, 31).strftime('%Y-%m-%d')
-            else:
-                # None for end_date when it would be the current year
-                return None 
-        elif m := ElementsMetadataRow.is_term.match(date_str):
+            prefix = 'start' if start_date else 'end'
+            month = as_none(self.data.get('month')) or as_none(self.data.get(f'{prefix}_month')) or (1 if start_date else 12)
+            month = int(month)
+            # Last day of the month
+            max_day = monthrange(year, month)[1]
+            day = as_none(self.data.get('day')) or as_none(self.data.get(f'{prefix}_day')) or (1 if start_date else max_day)
+            day = min(int(day), max_day)
+            return date(year, month, day).strftime('%Y-%m-%d')
+        elif m := ElementsMetadataRow.is_term.match(str(date_str)):
             year = int(m.group(2))
             term_suffix = '_START' if start_date else '_END'
             if year_end and year < datetime.now().year:
                 return date(year, 12, 31).strftime('%Y-%m-%d')
             return date(year, *TermDates[m.group(1).upper() + term_suffix].value).strftime('%Y-%m-%d')
         else:
-            warnings.warn(f'Unable to covert date string {date_str}. Skipping it.') 
+            warnings.warn(f'Unable to convert date string {date_str}. Skipping it.') 
             return
 
     @property
@@ -382,12 +396,19 @@ class ElementsMetadataRow:
     def end_date(self):
         source_key = self.elements_fields['end-date']
         # If there's no end date listed, but there is a start date, and if the start year is earlier than the current year, we want to return the end of the start year
-        if (not self.data[source_key]) or pd.isna(self.data[source_key]) or (self.data[source_key] in ['Ongoing', 'Term not Known']):
-            start_date_key = self.elements_fields['start-date']
-            if not self.data[start_date_key] or pd.isna(self.data[start_date_key]):
-                return
-            return self.convert_date(self.data[start_date_key], start_date=False, year_end=True)
-        return self.convert_date(self.data[source_key], False)
+        if self.category == 'teaching-activity':
+            if (not self.data[source_key]) or pd.isna(self.data[source_key]) or (self.data[source_key] in ['Ongoing', 'Term not Known']):
+                start_date_key = self.elements_fields['start-date']
+                if not self.data[start_date_key] or pd.isna(self.data[start_date_key]):
+                    return
+                return self.convert_date(self.data[start_date_key], start_date=False, year_end=True)
+            return self.convert_date(self.data[source_key], False)    
+        if not as_none(self.data[source_key]):
+            return None
+        end_date = self.convert_date(self.data[source_key], False)
+        if end_date and int(end_date[:4]) < int(self.start_date[:4]):
+            return None
+        return end_date           
     
     @property
     def institution(self):
